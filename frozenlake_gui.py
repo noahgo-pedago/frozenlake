@@ -252,6 +252,7 @@ class FrozenLakeGUI:
         self.message_queue = Queue()
         self.custom_map = None
         self.rewards_history = []
+        self.last_graph_update = 0  # Track last graph update to avoid frequent updates
 
         # Setup GUI
         self.setup_gui()
@@ -831,9 +832,16 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
     def show_learning_curve(self):
         """Display learning curve in the embedded graph panel."""
+        # Don't update if there's no data or too little data
+        if not self.rewards_history or len(self.rewards_history) < 10:
+            return
+
         try:
+            import matplotlib
+            matplotlib.use('TkAgg')  # Ensure TkAgg backend is used
             import matplotlib.pyplot as plt
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            plt.ioff()  # Turn off interactive mode to avoid threading issues
 
             # Clear existing canvas if any
             if self.graph_canvas:
@@ -1315,6 +1323,7 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
         self.is_training = True
         self.rewards_history = []
+        self.last_graph_update = 0
         self.train_button.config(state=tk.DISABLED)
         self.stop_button.config(state=tk.NORMAL)
         self.demo_button.config(state=tk.DISABLED)
@@ -1872,9 +1881,14 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                         else:
                             self.eta_var.set("--")
 
-                    # Draw curve only every few updates to avoid lag
-                    if messages_processed % 3 == 0:
-                        self.draw_learning_curve()
+                    # Draw curve only every 50 episodes to avoid lag and crashes on macOS
+                    if len(self.rewards_history) > 0 and len(self.rewards_history) - self.last_graph_update >= 50:
+                        try:
+                            self.show_learning_curve()
+                            self.last_graph_update = len(self.rewards_history)
+                        except Exception as e:
+                            # Silently ignore graph errors to prevent crashes
+                            pass
 
                 elif msg_type == "progress":
                     episode, total = data
