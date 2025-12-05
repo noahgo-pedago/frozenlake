@@ -13,6 +13,7 @@ import threading
 import time
 from queue import Queue
 import random
+import sys
 
 
 class ToolTip:
@@ -1570,7 +1571,65 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
         self.log("\n🎮 Lancement de la démo Pygame (fenêtre séparée)...")
         self.pygame_button.config(state=tk.DISABLED)
-        threading.Thread(target=self.run_pygame_demo, daemon=True).start()
+
+        # Use subprocess instead of threading to avoid macOS crash
+        threading.Thread(target=self.run_pygame_demo_subprocess, daemon=True).start()
+
+    def run_pygame_demo_subprocess(self):
+        """Run pygame demo in a separate process (macOS compatible)."""
+        import subprocess
+        import pickle
+        import tempfile
+        import os
+
+        try:
+            # Create temporary files for Q-table and custom map
+            with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.pkl') as f:
+                q_table_path = f.name
+                pickle.dump(self.agent.q_table, f)
+
+            custom_map_path = None
+            if self.custom_map:
+                with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.pkl') as f:
+                    custom_map_path = f.name
+                    pickle.dump(self.custom_map, f)
+
+            # Get parameters
+            map_name = self.map_size.get()
+            is_slippery = str(self.is_slippery.get())
+            delay = str(self.demo_speed.get())
+
+            # Build command
+            python_cmd = sys.executable
+            script_path = os.path.join(os.path.dirname(__file__), 'pygame_demo.py')
+
+            cmd = [python_cmd, script_path, q_table_path, map_name, is_slippery, delay]
+            if custom_map_path:
+                cmd.append(custom_map_path)
+
+            # Run subprocess
+            self.message_queue.put(("log", "🎮 Ouverture de la fenêtre pygame..."))
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
+            # Log output
+            if result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    self.message_queue.put(("log", line))
+
+            if result.returncode != 0 and result.stderr:
+                self.message_queue.put(("log", f"❌ Erreur: {result.stderr}"))
+
+            # Clean up temp files
+            os.unlink(q_table_path)
+            if custom_map_path:
+                os.unlink(custom_map_path)
+
+            self.message_queue.put(("log", "🏁 Démo pygame terminée!"))
+            self.message_queue.put(("pygame_complete", None))
+
+        except Exception as e:
+            self.message_queue.put(("log", f"❌ Erreur pygame: {str(e)}"))
+            self.message_queue.put(("pygame_complete", None))
 
     def show_result_screen(self, screen, success, episode, total_episodes, steps):
         """Display victory/defeat overlay on pygame window."""
