@@ -23,15 +23,25 @@ def show_result_screen(screen, success, episode, total_episodes, steps):
     overlay.fill((0, 0, 0))
     screen.blit(overlay, (0, 0))
 
+    # Calculate font sizes proportional to window size
+    # Base sizes for a 640x640 window (8x8 grid typical size)
+    scale = min(width, height) / 640.0
+    title_size = max(24, int(72 * scale))
+    subtitle_size = max(16, int(36 * scale))
+    info_size = max(12, int(28 * scale))
+    emoji_size = max(32, int(100 * scale))
+
     # Fonts
     try:
-        title_font = pygame.font.SysFont('arial', 72, bold=True)
-        subtitle_font = pygame.font.SysFont('arial', 36, bold=True)
-        info_font = pygame.font.SysFont('arial', 28)
+        title_font = pygame.font.SysFont('arial', title_size, bold=True)
+        subtitle_font = pygame.font.SysFont('arial', subtitle_size, bold=True)
+        info_font = pygame.font.SysFont('arial', info_size)
+        emoji_font = pygame.font.SysFont('arial', emoji_size)
     except:
-        title_font = pygame.font.Font(None, 72)
-        subtitle_font = pygame.font.Font(None, 36)
-        info_font = pygame.font.Font(None, 28)
+        title_font = pygame.font.Font(None, title_size)
+        subtitle_font = pygame.font.Font(None, subtitle_size)
+        info_font = pygame.font.Font(None, info_size)
+        emoji_font = pygame.font.Font(None, emoji_size)
 
     if success:
         # Victory screen
@@ -50,48 +60,59 @@ def show_result_screen(screen, success, episode, total_episodes, steps):
         emoji = "💀"
         subtitle_text = "Tombé dans un trou!"
 
-    # Calculate box dimensions
-    box_width = width - 120
-    box_height = 320
-    box_x = 60
+    # Calculate box dimensions proportional to window
+    margin = max(30, int(60 * scale))
+    box_width = width - (margin * 2)
+    box_height = max(150, int(320 * scale))
+    box_x = margin
     box_y = height // 2 - box_height // 2
 
+    # Adjust border radius proportionally
+    border_radius = max(10, int(20 * scale))
+
     # Draw outer glow effect
-    for i in range(5):
+    glow_iterations = max(3, int(5 * scale))
+    for i in range(glow_iterations):
         glow_alpha = 30 - (i * 5)
         glow_surface = pygame.Surface((width, height), pygame.SRCALPHA)
         pygame.draw.rect(glow_surface, (*border_color, glow_alpha),
                        (box_x - i*2, box_y - i*2, box_width + i*4, box_height + i*4),
-                       border_radius=25)
+                       border_radius=border_radius)
         screen.blit(glow_surface, (0, 0))
 
     # Draw main background box
-    pygame.draw.rect(screen, bg_color, (box_x, box_y, box_width, box_height), border_radius=20)
-    pygame.draw.rect(screen, border_color, (box_x, box_y, box_width, box_height), 5, border_radius=20)
+    pygame.draw.rect(screen, bg_color, (box_x, box_y, box_width, box_height), border_radius=border_radius)
+    pygame.draw.rect(screen, border_color, (box_x, box_y, box_width, box_height), max(2, int(5 * scale)), border_radius=border_radius)
+
+    # Calculate vertical spacing proportionally
+    emoji_y = box_y + int(80 * scale)
+    title_y = box_y + int(160 * scale)
+    subtitle_y = box_y + int(220 * scale)
+    episode_y = box_y + int(285 * scale)
 
     # Render emoji
-    emoji_font = pygame.font.SysFont('arial', 100)
     emoji_render = emoji_font.render(emoji, True, (255, 255, 255))
-    emoji_rect = emoji_render.get_rect(center=(width // 2, box_y + 80))
+    emoji_rect = emoji_render.get_rect(center=(width // 2, emoji_y))
     screen.blit(emoji_render, emoji_rect)
 
     # Render title with shadow
+    shadow_offset = max(1, int(2 * scale))
     title_render = title_font.render(title_text, True, (0, 0, 0))
-    title_rect = title_render.get_rect(center=(width // 2 + 2, box_y + 162))
+    title_rect = title_render.get_rect(center=(width // 2 + shadow_offset, title_y + shadow_offset))
     screen.blit(title_render, title_rect)
 
     title_render = title_font.render(title_text, True, title_color)
-    title_rect = title_render.get_rect(center=(width // 2, box_y + 160))
+    title_rect = title_render.get_rect(center=(width // 2, title_y))
     screen.blit(title_render, title_rect)
 
     # Render subtitle
     subtitle_render = subtitle_font.render(subtitle_text, True, (255, 255, 255))
-    subtitle_rect = subtitle_render.get_rect(center=(width // 2, box_y + 220))
+    subtitle_rect = subtitle_render.get_rect(center=(width // 2, subtitle_y))
     screen.blit(subtitle_render, subtitle_rect)
 
     # Episode info
     episode_render = info_font.render(f"Épisode {episode}/{total_episodes}", True, (220, 220, 220))
-    episode_rect = episode_render.get_rect(center=(width // 2, box_y + 285))
+    episode_rect = episode_render.get_rect(center=(width // 2, episode_y))
     screen.blit(episode_render, episode_rect)
 
     pygame.display.flip()

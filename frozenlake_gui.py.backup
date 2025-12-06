@@ -34,14 +34,9 @@ class ToolTip:
         self.tooltip.wm_overrideredirect(True)
         self.tooltip.wm_geometry(f"+{x}+{y}")
 
-        # Better colors for both light and dark mode on macOS
         label = tk.Label(self.tooltip, text=self.text, justify='left',
-                        background="#2b2b2b",  # Dark gray (works in both modes)
-                        foreground="#ffffff",  # White text (readable on dark bg)
-                        relief='solid', borderwidth=2,
-                        font=("Arial", 10),  # Slightly larger font
-                        wraplength=350,  # More space for text
-                        padx=12, pady=8)  # Padding so text doesn't touch edges
+                        background="#ffffe0", relief='solid', borderwidth=1,
+                        font=("Arial", 9), wraplength=300)
         label.pack()
 
     def hide_tooltip(self, event=None):
@@ -268,7 +263,7 @@ class FrozenLakeGUI:
         self.check_queue()
 
     def setup_gui(self):
-        """Setup all GUI components with resizable panes."""
+        """Setup all GUI components."""
 
         # Main container
         main_frame = ttk.Frame(self.root, padding="10")
@@ -278,11 +273,12 @@ class FrozenLakeGUI:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(0, weight=1)
+        main_frame.columnconfigure(1, weight=2)
         main_frame.rowconfigure(1, weight=1)
 
         # Title with help button
         title_frame = ttk.Frame(main_frame)
-        title_frame.grid(row=0, column=0, pady=10, sticky=(tk.W, tk.E))
+        title_frame.grid(row=0, column=0, columnspan=2, pady=10)
 
         title_label = ttk.Label(title_frame, text="🧊 FrozenLake Q-Learning Lab 🤖",
                                 font=('Arial', 20, 'bold'))
@@ -292,28 +288,14 @@ class FrozenLakeGUI:
                                 command=self.show_help)
         help_button.pack(side=tk.LEFT)
 
-        # Main horizontal PanedWindow (left/right split)
-        self.main_paned = ttk.PanedWindow(main_frame, orient=tk.HORIZONTAL)
-        self.main_paned.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        # Left panel - Parameters
+        self.setup_parameters_panel(main_frame)
 
-        # Left panel - Parameters (in a container for the paned window)
-        left_container = ttk.Frame(self.main_paned)
-        self.setup_parameters_panel(left_container)
-        self.main_paned.add(left_container, weight=1)
+        # Right panel - Visualization and controls
+        self.setup_visualization_panel(main_frame)
 
-        # Right side - Vertical PanedWindow (top: visualization, bottom: console)
-        self.right_paned = ttk.PanedWindow(self.main_paned, orient=tk.VERTICAL)
-        self.main_paned.add(self.right_paned, weight=3)
-
-        # Top right - Visualization
-        viz_container = ttk.Frame(self.right_paned)
-        self.setup_visualization_panel(viz_container)
-        self.right_paned.add(viz_container, weight=2)
-
-        # Bottom right - Console
-        console_container = ttk.Frame(self.right_paned)
-        self.setup_console_panel(console_container)
-        self.right_paned.add(console_container, weight=1)
+        # Bottom panel - Console output
+        self.setup_console_panel(main_frame)
 
     def show_help(self):
         """Show help window with explanations."""
@@ -497,12 +479,12 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
         # Container frame
         container = ttk.LabelFrame(parent, text="⚙️ Paramètres d'Apprentissage", padding="5")
-        container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        container.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         container.rowconfigure(0, weight=1)
         container.columnconfigure(0, weight=1)
 
         # Canvas with scrollbar
-        canvas = tk.Canvas(container, highlightthickness=0, width=380, height=600)
+        canvas = tk.Canvas(container, highlightthickness=0, width=380)
         scrollbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
         scrollable_frame = ttk.Frame(canvas)
 
@@ -517,21 +499,10 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         canvas.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         scrollbar.grid(row=0, column=1, sticky=(tk.N, tk.S))
 
-        # Enable mouse wheel scrolling - bind to canvas and container
+        # Enable mouse wheel scrolling
         def on_mousewheel(event):
             canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-
-        def bind_mousewheel(event):
-            canvas.bind_all("<MouseWheel>", on_mousewheel)
-
-        def unbind_mousewheel(event):
-            canvas.unbind_all("<MouseWheel>")
-
-        # Bind mouse wheel only when hovering over the panel
-        canvas.bind("<Enter>", bind_mousewheel)
-        canvas.bind("<Leave>", unbind_mousewheel)
-        container.bind("<Enter>", bind_mousewheel)
-        container.bind("<Leave>", unbind_mousewheel)
+        canvas.bind_all("<MouseWheel>", on_mousewheel)
 
         # Now use scrollable_frame as the parent for all parameters
         params_frame = scrollable_frame
@@ -556,16 +527,10 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         map_combo.bind('<<ComboboxSelected>>', self.on_map_size_change)
         row += 1
 
-        # Custom map button - ALWAYS ENABLED NOW
-        self.random_map_button = ttk.Button(params_frame, text="✏️ Créer ma propre carte",
-                                           command=self.generate_random_map)
+        # Random map button
+        self.random_map_button = ttk.Button(params_frame, text="🎲 Générer Carte Aléatoire",
+                                           command=self.generate_random_map, state=tk.DISABLED)
         self.random_map_button.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
-        ToolTip(self.random_map_button, "Créez une carte personnalisée de n'importe quelle taille (4x4 à 12x12)")
-        row += 1
-
-        # Show status of custom map
-        self.custom_map_status = ttk.Label(params_frame, text="", foreground="green", font=('Arial', 8))
-        self.custom_map_status.grid(row=row, column=0, columnspan=2, sticky=tk.W)
         row += 1
 
         # Slippery
@@ -586,27 +551,90 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                                                               sticky=(tk.W, tk.E), pady=10)
         row += 1
 
-        # === SIMPLE TRAINING OPTIONS (no technical sliders) ===
-        training_label = ttk.Label(params_frame, text="⚙️ Options d'entraînement:",
-                                   font=('Arial', 10, 'bold'))
-        training_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
+        # Hyperparameters
+        hyper_label = ttk.Label(params_frame, text="🧠 Hyperparamètres:",
+                               font=('Arial', 10, 'bold'))
+        hyper_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 10))
         row += 1
 
-        # Episodes (keep this simple)
-        ep_label = ttk.Label(params_frame, text="Nombre d'essais:")
+        # Learning rate
+        lr_label = ttk.Label(params_frame, text="Taux d'apprentissage (α):")
+        lr_label.grid(row=row, column=0, sticky=tk.W, pady=5)
+        ToolTip(lr_label, "Vitesse d'apprentissage\n\n"
+                "ÉLEVÉ (0.3-0.5): Apprend vite mais instable\n"
+                "BAS (0.1-0.2): Apprend lentement mais stable\n\n"
+                "💡 Recommandé: 0.15-0.2")
+
+        self.learning_rate = tk.DoubleVar(value=0.15)
+        lr_scale = ttk.Scale(params_frame, from_=0.01, to=0.5, variable=self.learning_rate,
+                            orient=tk.HORIZONTAL, length=150)
+        lr_scale.grid(row=row, column=1, sticky=tk.W, pady=5)
+        row += 1
+        self.lr_label = ttk.Label(params_frame, text="0.15", foreground='blue')
+        self.lr_label.grid(row=row, column=1, sticky=tk.W)
+        self.learning_rate.trace_add('write', lambda *args: self.lr_label.config(
+            text=f"{self.learning_rate.get():.2f}"))
+        row += 1
+
+        # Discount factor
+        gamma_label = ttk.Label(params_frame, text="Facteur de discount (γ):")
+        gamma_label.grid(row=row, column=0, sticky=tk.W, pady=5)
+        ToolTip(gamma_label, "Importance du futur\n\n"
+                "ÉLEVÉ (0.95-0.99): Planifie à long terme\n"
+                "BAS (0.5-0.8): Myope, récompense immédiate\n\n"
+                "💡 Recommandé: 0.95-0.99")
+
+        self.discount_factor = tk.DoubleVar(value=0.98)
+        gamma_scale = ttk.Scale(params_frame, from_=0.5, to=0.99, variable=self.discount_factor,
+                               orient=tk.HORIZONTAL, length=150)
+        gamma_scale.grid(row=row, column=1, sticky=tk.W, pady=5)
+        row += 1
+        self.gamma_label = ttk.Label(params_frame, text="0.98", foreground='blue')
+        self.gamma_label.grid(row=row, column=1, sticky=tk.W)
+        self.discount_factor.trace_add('write', lambda *args: self.gamma_label.config(
+            text=f"{self.discount_factor.get():.2f}"))
+        row += 1
+
+        # Epsilon decay
+        decay_label = ttk.Label(params_frame, text="Décroissance epsilon:")
+        decay_label.grid(row=row, column=0, sticky=tk.W, pady=5)
+        ToolTip(decay_label, "Vitesse de passage exploration→exploitation\n\n"
+                "RAPIDE (0.95-0.98): Arrête d'explorer vite\n"
+                "LENT (0.995-0.999): Continue d'explorer\n\n"
+                "💡 Recommandé: 0.995-0.997")
+
+        self.epsilon_decay = tk.DoubleVar(value=0.996)
+        decay_scale = ttk.Scale(params_frame, from_=0.95, to=0.999, variable=self.epsilon_decay,
+                               orient=tk.HORIZONTAL, length=150)
+        decay_scale.grid(row=row, column=1, sticky=tk.W, pady=5)
+        row += 1
+        self.decay_label = ttk.Label(params_frame, text="0.996", foreground='blue')
+        self.decay_label.grid(row=row, column=1, sticky=tk.W)
+        self.epsilon_decay.trace_add('write', lambda *args: self.decay_label.config(
+            text=f"{self.epsilon_decay.get():.3f}"))
+        row += 1
+
+        # Episodes
+        ep_label = ttk.Label(params_frame, text="Nombre d'épisodes:")
         ep_label.grid(row=row, column=0, sticky=tk.W, pady=5)
-        ToolTip(ep_label, "Plus d'essais = meilleur apprentissage mais plus long")
+        ToolTip(ep_label, "Nombre de parties d'entraînement\n\n"
+                "COURT (<5000): Rapide mais peu efficace\n"
+                "MOYEN (10000): Bon équilibre\n"
+                "LONG (>15000): Meilleure performance\n\n"
+                "💡 Recommandé: 10000")
 
         self.episodes = tk.IntVar(value=10000)
-        episodes_spinbox = ttk.Spinbox(params_frame, from_=1000, to=50000, increment=1000,
-                                       textvariable=self.episodes, width=15)
-        episodes_spinbox.grid(row=row, column=1, sticky=tk.W, pady=5)
+        episodes_entry = ttk.Entry(params_frame, textvariable=self.episodes, width=17)
+        episodes_entry.grid(row=row, column=1, sticky=tk.W, pady=5)
         row += 1
 
-        # Update frequency (keep but simplify)
-        update_label = ttk.Label(params_frame, text="Vitesse d'affichage:")
+        # Update frequency
+        update_label = ttk.Label(params_frame, text="Mise à jour UI:")
         update_label.grid(row=row, column=0, sticky=tk.W, pady=5)
-        ToolTip(update_label, "Fréquence de mise à jour de l'interface")
+        ToolTip(update_label, "Fréquence de rafraîchissement de l'interface\n\n"
+                "BAS (10-50): Plus fluide, peut ralentir\n"
+                "MOYEN (100): Bon équilibre\n"
+                "HAUT (500+): Moins fluide, plus rapide")
 
         self.update_frequency = tk.IntVar(value=100)
         update_combo = ttk.Combobox(params_frame, textvariable=self.update_frequency,
@@ -614,38 +642,32 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         update_combo.grid(row=row, column=1, sticky=tk.W, pady=5)
         row += 1
 
-        # Initialize hidden technical parameters (will be set by presets)
-        self.learning_rate = tk.DoubleVar(value=0.15)
-        self.discount_factor = tk.DoubleVar(value=0.98)
-        self.epsilon_decay = tk.DoubleVar(value=0.996)
-
         # Separator
         ttk.Separator(params_frame, orient='horizontal').grid(row=row, column=0, columnspan=2,
                                                               sticky=(tk.W, tk.E), pady=10)
         row += 1
 
-        # Preset buttons - NOW WITH CLEAR DESCRIPTIONS
-        preset_label = ttk.Label(params_frame, text="🎯 Comment voulez-vous qu'il apprenne?",
-                                font=('Arial', 10, 'bold'))
+        # Preset buttons
+        preset_label = ttk.Label(params_frame, text="🎯 Préréglages:", font=('Arial', 10, 'bold'))
         preset_label.grid(row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 5))
         row += 1
 
-        beginner_btn = ttk.Button(params_frame, text="🐰 Apprend VITE mais oublie vite",
+        beginner_btn = ttk.Button(params_frame, text="🎓 Débutant (Facile, rapide)",
                   command=self.preset_beginner)
         beginner_btn.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2)
-        ToolTip(beginner_btn, "Taux d'apprentissage élevé (0.2)\nBon pour: tests rapides, débutants\nPlus instable mais résultat rapide")
+        ToolTip(beginner_btn, "Sans glace glissante\n5000 épisodes\nRésultat attendu: >90%")
         row += 1
 
-        standard_btn = ttk.Button(params_frame, text="⚖️ Apprend à vitesse NORMALE",
+        standard_btn = ttk.Button(params_frame, text="⚡ Standard (Équilibré)",
                   command=self.preset_standard)
         standard_btn.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2)
-        ToolTip(standard_btn, "Taux d'apprentissage moyen (0.15)\nBon pour: la plupart des cas\nÉquilibre vitesse et qualité")
+        ToolTip(standard_btn, "Avec glace glissante\n10000 épisodes\nRésultat attendu: 65-75%")
         row += 1
 
-        optimal_btn = ttk.Button(params_frame, text="🐢 Apprend LENTEMENT mais retient mieux",
+        optimal_btn = ttk.Button(params_frame, text="🎯 Optimal (Meilleure perf)",
                   command=self.preset_optimal)
         optimal_btn.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=2)
-        ToolTip(optimal_btn, "Taux d'apprentissage bas (0.1)\nBon pour: meilleure qualité finale\nPlus lent mais plus stable")
+        ToolTip(optimal_btn, "Avec glace glissante\n15000 épisodes\nRésultat attendu: 75-85%")
         row += 1
 
         # Advanced ludic controls
@@ -653,57 +675,132 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                                                                 sticky=(tk.W, tk.E), pady=10)
         row += 1
 
-        # === UNIFIED REWARDS/PENALTIES SECTION ===
-        # No more action weights - too complex
-        # User chooses positive (reward) or negative (penalty) for each behavior
-
-        behavior_frame = ttk.LabelFrame(params_frame, text="🎯 Récompenses & Pénalités (Optionnel)", padding="15")
-        behavior_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
-        behavior_frame.columnconfigure(1, weight=1)
+        ttk.Label(params_frame, text="🎮 Mode Ludique", font=('Arial', 11, 'bold')).grid(
+            row=row, column=0, columnspan=2, sticky=tk.W, pady=(0, 5))
         row += 1
 
-        ttk.Label(behavior_frame, text="Positif = récompense | Négatif = pénalité | 0 = neutre",
-                 font=('Arial', 8, 'italic'), foreground='gray').grid(
-            row=0, column=0, columnspan=2, pady=(0, 10))
+        # Action weights panel
+        action_frame = ttk.LabelFrame(params_frame, text="⚡ Poids des Actions", padding="15")
+        action_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
+        action_frame.columnconfigure(1, weight=1)
+        row += 1
 
-        # Initialize all behavior variables
-        self.behaviors = {
-            'goal': tk.DoubleVar(value=1.0),
-            'hole': tk.DoubleVar(value=0.0),
-            'step': tk.DoubleVar(value=0.0),
-            'wall_hit': tk.DoubleVar(value=0.0),
-            'revisit': tk.DoubleVar(value=0.0),
-            'loop': tk.DoubleVar(value=0.0),
-            'move_closer': tk.DoubleVar(value=0.0),  # NEW: separate control
-            'move_away': tk.DoubleVar(value=0.0)      # NEW: separate control
-        }
-
-        behaviors_config = [
-            ('goal', "🏆 Atteindre le but:", -5.0, 10.0, 1.0, "Positif = récompense | Négatif = pénalité"),
-            ('hole', "💀 Tomber dans un trou:", -5.0, 5.0, 0.0, "Positif/Négatif à votre choix"),
-            ('step', "👟 Chaque étape:", -1.0, 1.0, 0.0, "Négatif = encourage rapidité | Positif = encourage exploration"),
-            ('wall_hit', "🧱 Frapper un mur:", -1.0, 1.0, 0.0, "Positif/Négatif à votre choix"),
-            ('revisit', "🔁 Revisiter une case:", -1.0, 1.0, 0.0, "Positif/Négatif à votre choix"),
-            ('loop', "🔄 Tourner en boucle:", -1.0, 1.0, 0.0, "Positif/Négatif à votre choix"),
-            ('move_closer', "📍 Se rapprocher du but:", -2.0, 2.0, 0.0, "Positif = récompense | Négatif = pénalité | Contrôle indépendant!"),
-            ('move_away', "↩️ S'éloigner du but:", -2.0, 2.0, 0.0, "Positif = récompense (!) | Négatif = pénalité | Contrôle indépendant!"),
-        ]
-
-        for i, (key, label, min_val, max_val, default, tooltip) in enumerate(behaviors_config):
-            ttk.Label(behavior_frame, text=label, font=('Arial', 9)).grid(
-                row=i+1, column=0, sticky=tk.W, pady=3, padx=(0, 10))
-            spinbox = ttk.Spinbox(behavior_frame, from_=min_val, to=max_val, increment=0.1,
-                                 textvariable=self.behaviors[key], width=10, format="%.1f")
-            spinbox.grid(row=i+1, column=1, sticky=(tk.W, tk.E), pady=3)
-            ToolTip(spinbox, tooltip)
-
-        # Initialize action_weights to neutral (no longer used but needed for compatibility)
+        # Create a visual directional pad
         self.action_weights = {
             'left': tk.DoubleVar(value=1.0),
             'down': tk.DoubleVar(value=1.0),
             'right': tk.DoubleVar(value=1.0),
             'up': tk.DoubleVar(value=1.0)
         }
+
+        # Visual grid layout for directional pad
+        ttk.Label(action_frame, text="← Gauche:", font=('Arial', 9)).grid(row=0, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        left_spin = ttk.Spinbox(action_frame, from_=0.1, to=5.0, increment=0.1,
+                                textvariable=self.action_weights['left'], width=10)
+        left_spin.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(left_spin, "Poids pour aller à gauche\n>1.0 = favorisé\n<1.0 = défavorisé")
+
+        ttk.Label(action_frame, text="↓ Bas:", font=('Arial', 9)).grid(row=1, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        down_spin = ttk.Spinbox(action_frame, from_=0.1, to=5.0, increment=0.1,
+                                textvariable=self.action_weights['down'], width=10)
+        down_spin.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(down_spin, "Poids pour aller vers le bas\n>1.0 = favorisé\n<1.0 = défavorisé")
+
+        ttk.Label(action_frame, text="→ Droite:", font=('Arial', 9)).grid(row=2, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        right_spin = ttk.Spinbox(action_frame, from_=0.1, to=5.0, increment=0.1,
+                                 textvariable=self.action_weights['right'], width=10)
+        right_spin.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(right_spin, "Poids pour aller à droite\n>1.0 = favorisé\n<1.0 = défavorisé")
+
+        ttk.Label(action_frame, text="↑ Haut:", font=('Arial', 9)).grid(row=3, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        up_spin = ttk.Spinbox(action_frame, from_=0.1, to=5.0, increment=0.1,
+                              textvariable=self.action_weights['up'], width=10)
+        up_spin.grid(row=3, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(up_spin, "Poids pour aller vers le haut\n>1.0 = favorisé\n<1.0 = défavorisé")
+
+        # Visual probability display
+        self.action_prob_label = ttk.Label(action_frame, text="Probabilités: ← 25% | ↓ 25% | → 25% | ↑ 25%",
+                                           font=('Arial', 8), foreground='blue')
+        self.action_prob_label.grid(row=4, column=0, columnspan=2, pady=(8, 0))
+        ToolTip(self.action_prob_label, "Probabilités relatives pendant l'exploration aléatoire")
+
+        # Update probability display when weights change
+        for weight_var in self.action_weights.values():
+            weight_var.trace_add('write', self.update_action_probabilities)
+
+        # Reward shaping panel
+        reward_frame = ttk.LabelFrame(params_frame, text="🎁 Récompenses Personnalisées", padding="15")
+        reward_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
+        reward_frame.columnconfigure(1, weight=1)
+        row += 1
+
+        self.rewards = {
+            'goal': tk.DoubleVar(value=1.0),
+            'hole': tk.DoubleVar(value=0.0),
+            'step': tk.DoubleVar(value=0.0)
+        }
+
+        ttk.Label(reward_frame, text="🏆 Objectif atteint:", font=('Arial', 9)).grid(
+            row=0, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        goal_spin = ttk.Spinbox(reward_frame, from_=-5.0, to=10.0, increment=0.1,
+                                textvariable=self.rewards['goal'], width=10)
+        goal_spin.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(goal_spin, "Récompense pour atteindre le but\nDéfaut: 1.0\nPlus haut = plus motivé")
+
+        ttk.Label(reward_frame, text="💀 Tombe dans trou:", font=('Arial', 9)).grid(
+            row=1, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        hole_spin = ttk.Spinbox(reward_frame, from_=-5.0, to=5.0, increment=0.1,
+                                textvariable=self.rewards['hole'], width=10)
+        hole_spin.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(hole_spin, "Pénalité pour tomber dans un trou\nDéfaut: 0.0\nNégatif = pénalise plus")
+
+        ttk.Label(reward_frame, text="👣 Chaque pas:", font=('Arial', 9)).grid(
+            row=2, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        step_spin = ttk.Spinbox(reward_frame, from_=-1.0, to=1.0, increment=0.01,
+                                textvariable=self.rewards['step'], width=10)
+        step_spin.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(step_spin, "Récompense/pénalité par pas\nDéfaut: 0.0\nNégatif = encourage rapidité")
+
+        # Advanced penalties panel
+        penalties_frame = ttk.LabelFrame(params_frame, text="⚙️ Pénalités Avancées", padding="15")
+        penalties_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
+        penalties_frame.columnconfigure(1, weight=1)
+        row += 1
+
+        self.advanced_penalties = {
+            'wall_hit': tk.DoubleVar(value=0.0),
+            'revisit': tk.DoubleVar(value=0.0),
+            'loop': tk.DoubleVar(value=0.0),
+            'distance': tk.DoubleVar(value=0.0)
+        }
+
+        ttk.Label(penalties_frame, text="🧱 Collision mur:", font=('Arial', 9)).grid(
+            row=0, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        wall_spin = ttk.Spinbox(penalties_frame, from_=-1.0, to=1.0, increment=0.01,
+                                textvariable=self.advanced_penalties['wall_hit'], width=10)
+        wall_spin.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(wall_spin, "Pénalité quand l'agent reste sur place (mur)\nDéfaut: 0.0\nNégatif = pénalise les collisions")
+
+        ttk.Label(penalties_frame, text="🔁 Revisite case:", font=('Arial', 9)).grid(
+            row=1, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        revisit_spin = ttk.Spinbox(penalties_frame, from_=-1.0, to=1.0, increment=0.01,
+                                   textvariable=self.advanced_penalties['revisit'], width=10)
+        revisit_spin.grid(row=1, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(revisit_spin, "Pénalité pour visiter une case déjà visitée\nDéfaut: 0.0\nNégatif = encourage exploration")
+
+        ttk.Label(penalties_frame, text="🔄 Boucle détectée:", font=('Arial', 9)).grid(
+            row=2, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        loop_spin = ttk.Spinbox(penalties_frame, from_=-1.0, to=1.0, increment=0.01,
+                                textvariable=self.advanced_penalties['loop'], width=10)
+        loop_spin.grid(row=2, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(loop_spin, "Pénalité pour boucler (même case dans les 5 derniers pas)\nDéfaut: 0.0\nNégatif = pénalise les boucles")
+
+        ttk.Label(penalties_frame, text="📏 Distance au but:", font=('Arial', 9)).grid(
+            row=3, column=0, sticky=tk.W, pady=3, padx=(0, 10))
+        distance_spin = ttk.Spinbox(penalties_frame, from_=-2.0, to=2.0, increment=0.1,
+                                    textvariable=self.advanced_penalties['distance'], width=10)
+        distance_spin.grid(row=3, column=1, sticky=(tk.W, tk.E), pady=3)
+        ToolTip(distance_spin, "Bonus basé sur la distance au but\nDéfaut: 0.0\nPositif = récompense rapprochement\nNégatif = pénalise éloignement")
 
         # Reset button
         reset_btn = ttk.Button(params_frame, text="🔄 Réinitialiser Mode Ludique",
@@ -725,17 +822,17 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             )
 
     def reset_ludic_mode(self):
-        """Reset all behavior parameters to default."""
-        # Reset all behaviors to neutral (except goal = 1.0)
-        self.behaviors['goal'].set(1.0)
-        self.behaviors['hole'].set(0.0)
-        self.behaviors['step'].set(0.0)
-        self.behaviors['wall_hit'].set(0.0)
-        self.behaviors['revisit'].set(0.0)
-        self.behaviors['loop'].set(0.0)
-        self.behaviors['move_closer'].set(0.0)
-        self.behaviors['move_away'].set(0.0)
-        self.log("✅ Récompenses et pénalités réinitialisées aux valeurs par défaut")
+        """Reset all ludic mode parameters to default."""
+        for weight_var in self.action_weights.values():
+            weight_var.set(1.0)
+        self.rewards['goal'].set(1.0)
+        self.rewards['hole'].set(0.0)
+        self.rewards['step'].set(0.0)
+        self.advanced_penalties['wall_hit'].set(0.0)
+        self.advanced_penalties['revisit'].set(0.0)
+        self.advanced_penalties['loop'].set(0.0)
+        self.advanced_penalties['distance'].set(0.0)
+        self.log_message("✅ Mode ludique réinitialisé aux valeurs par défaut")
 
     def show_learning_curve(self):
         """Display learning curve in the embedded graph panel."""
@@ -750,6 +847,10 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
             plt.ioff()  # Turn off interactive mode to avoid threading issues
 
+            # Clear existing canvas if any
+            if self.graph_canvas:
+                self.graph_canvas.get_tk_widget().destroy()
+
             # Calculate moving average
             window_size = 100
             if len(self.rewards_history) < window_size:
@@ -762,54 +863,45 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 else:
                     moving_avg.append(np.mean(self.rewards_history[i-window_size+1:i+1]) * 100)
 
+            # Create figure (smaller for embedded view)
+            self.graph_figure = plt.Figure(figsize=(6, 8), dpi=80)
+
+            # Plot 1: Win rate over time
+            ax1 = self.graph_figure.add_subplot(2, 1, 1)
             episodes = list(range(1, len(moving_avg) + 1))
+            ax1.plot(episodes, moving_avg, color='#2ecc71', linewidth=2)
+            ax1.fill_between(episodes, 0, moving_avg, alpha=0.3, color='#2ecc71')
+            ax1.set_xlabel('Épisode', fontsize=10)
+            ax1.set_ylabel('Taux (%)', fontsize=10)
+            ax1.set_title(f'Taux de Réussite (moy. {window_size})', fontsize=11, fontweight='bold')
+            ax1.grid(True, alpha=0.3)
+            ax1.set_ylim(0, 100)
+            ax1.tick_params(labelsize=8)
 
-            # Create figure and canvas only once
-            if self.graph_canvas is None:
-                # Create figure - ONLY ONE GRAPH NOW (simpler and clearer)
-                self.graph_figure = plt.Figure(figsize=(6, 4), dpi=90)
-                self.graph_ax = self.graph_figure.add_subplot(1, 1, 1)
+            # Plot 2: Success/Failure per episode (raw data sampled)
+            ax2 = self.graph_figure.add_subplot(2, 1, 2)
+            sample_rate = max(1, len(self.rewards_history) // 500)
+            sampled_episodes = episodes[::sample_rate]
+            sampled_rewards = [r * 100 for r in self.rewards_history[::sample_rate]]
 
-                # Initial setup
-                self.graph_ax.set_xlabel('Épisode', fontsize=11)
-                self.graph_ax.set_ylabel('Taux de Réussite (%)', fontsize=11)
-                self.graph_ax.grid(True, alpha=0.3, linestyle='--')
-                self.graph_ax.set_ylim(0, 100)
-                self.graph_ax.tick_params(labelsize=9)
+            colors = ['#27ae60' if r > 0 else '#e74c3c' for r in sampled_rewards]
+            ax2.bar(sampled_episodes, sampled_rewards, color=colors, alpha=0.6, width=sample_rate*0.8)
+            ax2.set_xlabel('Épisode', fontsize=10)
+            ax2.set_ylabel('Résultat', fontsize=10)
+            ax2.set_title('Résultats par Épisode', fontsize=11, fontweight='bold')
+            ax2.set_yticks([0, 100])
+            ax2.set_yticklabels(['Échec', 'Succès'], fontsize=8)
+            ax2.grid(True, alpha=0.3, axis='x')
+            ax2.tick_params(labelsize=8)
 
-                self.graph_figure.tight_layout(pad=1.5)
+            self.graph_figure.tight_layout(pad=2.0)
 
-                # Embed in tkinter frame with fixed size
-                self.graph_canvas = FigureCanvasTkAgg(self.graph_figure, master=self.graph_frame_widget)
-                canvas_widget = self.graph_canvas.get_tk_widget()
-                canvas_widget.pack(fill=tk.BOTH, expand=True)
-                # Set minimum size to prevent jiggling
-                canvas_widget.configure(width=600, height=400)
+            # Embed in tkinter frame
+            self.graph_canvas = FigureCanvasTkAgg(self.graph_figure, master=self.graph_frame_widget)
+            self.graph_canvas.draw()
+            self.graph_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-                # Initialize line and fill objects
-                self.graph_line, = self.graph_ax.plot([], [], color='#2ecc71', linewidth=2.5)
-                self.graph_fill = None
-
-            # Update data (much faster than recreating everything)
-            self.graph_line.set_data(episodes, moving_avg)
-
-            # Update fill
-            if self.graph_fill:
-                self.graph_fill.remove()
-            self.graph_fill = self.graph_ax.fill_between(episodes, 0, moving_avg, alpha=0.3, color='#2ecc71')
-
-            # Update title and limits
-            self.graph_ax.set_title(f'Évolution du Taux de Réussite (moyenne sur {window_size} épisodes)',
-                        fontsize=12, fontweight='bold')
-            self.graph_ax.relim()
-            self.graph_ax.autoscale_view(scalex=True, scaley=False)  # Only autoscale X, keep Y at 0-100
-
-            # Redraw only the changed parts (faster)
-            self.graph_canvas.draw_idle()
-
-            # Only log every 5 updates to reduce console spam
-            if len(self.rewards_history) % 500 == 0:
-                self.log("📊 Graphique d'apprentissage mis à jour!")
+            self.log("📊 Graphique d'apprentissage mis à jour!")
 
         except ImportError:
             self.log("⚠️  Matplotlib n'est pas installé. Installez-le avec: pip install matplotlib")
@@ -822,7 +914,7 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         """Setup visualization and control panel."""
 
         viz_frame = ttk.Frame(parent)
-        viz_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        viz_frame.grid(row=1, column=1, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         viz_frame.rowconfigure(1, weight=1)
         viz_frame.rowconfigure(2, weight=1)
         viz_frame.columnconfigure(0, weight=1)
@@ -860,85 +952,78 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                                   values=[0.1, 0.2, 0.3, 0.5, 1.0], state="readonly", width=8)
         speed_combo.grid(row=0, column=5, padx=5)
 
-        # Live visualization always enabled (no toggle)
+        # Live visualization toggle
         self.show_live_grid = tk.BooleanVar(value=True)
+        live_check = ttk.Checkbutton(control_frame, text="Voir entraînement",
+                                     variable=self.show_live_grid)
+        live_check.grid(row=0, column=6, padx=(20, 5))
+        ToolTip(live_check, "Affiche l'agent dans la grille pendant l'entraînement")
 
         # Statistics panel
         stats_frame = ttk.LabelFrame(viz_frame, text="📊 Statistiques en Temps Réel", padding="10")
-        stats_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        stats_frame.grid(row=1, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         stats_frame.columnconfigure(0, weight=1)
-        stats_frame.columnconfigure(1, weight=1)
-        stats_frame.columnconfigure(2, weight=1)
 
-        # Stats display in 3 columns
+        # Stats display
         stats_container = ttk.Frame(stats_frame)
         stats_container.pack(fill=tk.BOTH, expand=True)
 
-        # Configure 3 columns with equal weight
-        for i in range(6):
-            stats_container.columnconfigure(i, weight=1)
-
-        # COLUMN 1 - Progression & Epsilon
         # Progress
         ttk.Label(stats_container, text="Progression:", font=('Arial', 10, 'bold')).grid(
-            row=0, column=0, sticky=tk.W, pady=5, padx=(0, 5))
+            row=0, column=0, sticky=tk.W, pady=5)
         self.progress_var = tk.StringVar(value="0 / 0 épisodes")
         ttk.Label(stats_container, textvariable=self.progress_var).grid(
-            row=0, column=1, sticky=tk.W, padx=5, pady=5)
+            row=0, column=1, sticky=tk.W, padx=10, pady=5)
+
+        self.progress_bar = ttk.Progressbar(stats_container, mode='determinate', length=400)
+        self.progress_bar.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5, padx=5)
 
         # Epsilon
-        eps_label = ttk.Label(stats_container, text="Epsilon:", font=('Arial', 10, 'bold'))
-        eps_label.grid(row=1, column=0, sticky=tk.W, pady=5, padx=(0, 5))
+        eps_label = ttk.Label(stats_container, text="Epsilon (exploration):", font=('Arial', 10, 'bold'))
+        eps_label.grid(row=2, column=0, sticky=tk.W, pady=5)
         ToolTip(eps_label, "Taux d'exploration actuel\n1.0 = 100% exploration\n0.01 = 99% exploitation")
+
         self.epsilon_var = tk.StringVar(value="1.000")
         ttk.Label(stats_container, textvariable=self.epsilon_var, font=('Arial', 12)).grid(
-            row=1, column=1, sticky=tk.W, padx=5, pady=5)
+            row=2, column=1, sticky=tk.W, padx=10, pady=5)
 
-        # COLUMN 2 - Win rate & Reward
         # Win rate
-        win_label = ttk.Label(stats_container, text="Taux réussite:", font=('Arial', 10, 'bold'))
-        win_label.grid(row=0, column=2, sticky=tk.W, pady=5, padx=(15, 5))
+        win_label = ttk.Label(stats_container, text="Taux de réussite:", font=('Arial', 10, 'bold'))
+        win_label.grid(row=3, column=0, sticky=tk.W, pady=5)
         ToolTip(win_label, "% de victoires sur les 100 derniers épisodes\n>70% = très bon (sans glace)\n>60% = très bon (avec glace)")
+
         self.winrate_var = tk.StringVar(value="0.0%")
         self.winrate_label = ttk.Label(stats_container, textvariable=self.winrate_var,
                  font=('Arial', 14, 'bold'), foreground='green')
-        self.winrate_label.grid(row=0, column=3, sticky=tk.W, padx=5, pady=5)
+        self.winrate_label.grid(row=3, column=1, sticky=tk.W, padx=10, pady=5)
 
         # Average reward
-        ttk.Label(stats_container, text="Récompense moy.:",
-                 font=('Arial', 10, 'bold')).grid(row=1, column=2, sticky=tk.W, pady=5, padx=(15, 5))
+        ttk.Label(stats_container, text="Récompense moyenne:",
+                 font=('Arial', 10, 'bold')).grid(row=4, column=0, sticky=tk.W, pady=5)
         self.reward_var = tk.StringVar(value="0.000")
         ttk.Label(stats_container, textvariable=self.reward_var, font=('Arial', 12)).grid(
-            row=1, column=3, sticky=tk.W, padx=5, pady=5)
+            row=4, column=1, sticky=tk.W, padx=10, pady=5)
 
-        # COLUMN 3 - Time
         # Time elapsed
         ttk.Label(stats_container, text="Temps écoulé:", font=('Arial', 10, 'bold')).grid(
-            row=0, column=4, sticky=tk.W, pady=5, padx=(15, 5))
+            row=5, column=0, sticky=tk.W, pady=5)
         self.time_var = tk.StringVar(value="0s")
         ttk.Label(stats_container, textvariable=self.time_var).grid(
-            row=0, column=5, sticky=tk.W, padx=5, pady=5)
+            row=5, column=1, sticky=tk.W, padx=10, pady=5)
 
         # ETA
         ttk.Label(stats_container, text="Temps restant:", font=('Arial', 10, 'bold')).grid(
-            row=1, column=4, sticky=tk.W, pady=5, padx=(15, 5))
+            row=6, column=0, sticky=tk.W, pady=5)
         self.eta_var = tk.StringVar(value="--")
         ttk.Label(stats_container, textvariable=self.eta_var).grid(
-            row=1, column=5, sticky=tk.W, padx=5, pady=5)
-
-        # Progress bar (full width below stats)
-        self.progress_bar = ttk.Progressbar(stats_container, mode='determinate', length=400)
-        self.progress_bar.grid(row=2, column=0, columnspan=6, sticky=(tk.W, tk.E), pady=(10, 5), padx=5)
+            row=6, column=1, sticky=tk.W, padx=10, pady=5)
 
         # Grid visualization (left side, smaller)
         grid_frame = ttk.LabelFrame(viz_frame, text="🎮 Visualisation de la Grille", padding="10")
         grid_frame.grid(row=2, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=(0, 5))
 
-        self.grid_canvas = tk.Canvas(grid_frame, bg='#2c3e50')
+        self.grid_canvas = tk.Canvas(grid_frame, width=400, height=400, bg='#2c3e50')
         self.grid_canvas.pack(fill=tk.BOTH, expand=True)
-
-        # Redraw grid when canvas is resized
-        self.grid_canvas.bind("<Configure>", self.on_canvas_resize)
 
         # Graph visualization (right side)
         graph_frame = ttk.LabelFrame(viz_frame, text="📈 Courbe d'Apprentissage", padding="10")
@@ -963,7 +1048,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         """Setup console output panel."""
 
         console_frame = ttk.LabelFrame(parent, text="📝 Journal d'Entraînement", padding="10")
-        console_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        console_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S),
+                          padx=5, pady=5)
         console_frame.rowconfigure(0, weight=1)
         console_frame.columnconfigure(0, weight=1)
 
@@ -988,15 +1074,6 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         """Add message to console."""
         self.console.insert(tk.END, message + "\n")
         self.console.see(tk.END)
-
-    def on_canvas_resize(self, event):
-        """Handle canvas resize event - redraw grid to fit new size."""
-        # Only redraw if we have a valid environment and the size is reasonable
-        if self.env and event.width > 50 and event.height > 50:
-            # Small delay to avoid excessive redraws during resizing
-            if hasattr(self, '_resize_job'):
-                self.root.after_cancel(self._resize_job)
-            self._resize_job = self.root.after(100, lambda: self.draw_grid())
 
     def draw_grid(self, agent_pos=None, path=None, show_values=False):
         """Draw the FrozenLake grid with agent position."""
@@ -1128,19 +1205,18 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
     def on_map_size_change(self, event=None):
         """Handle map size change."""
-        # Clear custom map if switching away from custom
-        if self.map_size.get() != "Personnalisée" and self.custom_map is not None:
+        if self.map_size.get() == "Personnalisée":
+            self.random_map_button.config(state=tk.NORMAL)
+        else:
+            self.random_map_button.config(state=tk.DISABLED)
             self.custom_map = None
-            self.custom_map_status.config(text="")
-            self.log("ℹ️ Carte personnalisée désactivée")
 
     def generate_random_map(self):
         """Generate a random map."""
         try:
             dialog = tk.Toplevel(self.root)
             dialog.title("Générer Carte Aléatoire")
-            dialog.geometry("400x320")
-            dialog.resizable(True, True)  # Allow resizing
+            dialog.geometry("350x220")
             dialog.transient(self.root)
             dialog.grab_set()
 
@@ -1163,7 +1239,7 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             def on_generate():
                 size = size_var.get()
                 prob = prob_var.get()
-                self.log(f"\n✏️ Génération d'une carte {size}x{size} (difficulté: {int(prob*100)}% de trous)...")
+                self.log(f"\n🎲 Génération d'une carte {size}x{size} (probabilité trous: {prob:.2f})...")
 
                 # Track attempts for logging
                 attempts = 0
@@ -1181,11 +1257,6 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                         self.log(f"   Chemin garanti de S (départ) à G (arrivée)")
                         for i, row in enumerate(self.custom_map):
                             self.log(f"  {row}")
-
-                        # Update UI - SET TO CUSTOM AND SHOW STATUS
-                        self.map_size.set("Personnalisée")
-                        self.custom_map_status.config(text=f"✓ Carte {size}x{size} créée!")
-
                         dialog.destroy()
                         return
 
@@ -1196,11 +1267,6 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 self.log(f"✅ Carte de secours générée (chemin garanti)")
                 for i, row in enumerate(self.custom_map):
                     self.log(f"  {row}")
-
-                # Update UI
-                self.map_size.set("Personnalisée")
-                self.custom_map_status.config(text=f"✓ Carte {size}x{size} créée!")
-
                 dialog.destroy()
 
             ttk.Button(dialog, text="Générer", command=on_generate).pack(pady=15)
@@ -1287,11 +1353,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             update_freq = self.update_frequency.get()
 
             # Create environment
-            if map_name == "Personnalisée":
-                if self.custom_map:
-                    self.env = gym.make("FrozenLake-v1", desc=self.custom_map, is_slippery=is_slippery)
-                else:
-                    raise ValueError("Vous devez d'abord créer une carte personnalisée avec le bouton '✏️ Créer ma propre carte'")
+            if self.custom_map:
+                self.env = gym.make("FrozenLake-v1", desc=self.custom_map, is_slippery=is_slippery)
             else:
                 self.env = gym.make("FrozenLake-v1", map_name=map_name, is_slippery=is_slippery)
 
@@ -1302,20 +1365,16 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 self.action_weights['right'].get(),
                 self.action_weights['up'].get()
             ]
-
-            # Get unified behaviors (can be positive or negative)
             reward_shaping = {
-                'goal': self.behaviors['goal'].get(),
-                'hole': self.behaviors['hole'].get(),
-                'step': self.behaviors['step'].get()
+                'goal': self.rewards['goal'].get(),
+                'hole': self.rewards['hole'].get(),
+                'step': self.rewards['step'].get()
             }
             advanced_penalties = {
-                'wall_hit': self.behaviors['wall_hit'].get(),
-                'revisit': self.behaviors['revisit'].get(),
-                'loop': self.behaviors['loop'].get(),
-                # Combine move_closer and move_away into single distance parameter
-                # Positive move_closer + negative move_away = standard behavior
-                'distance': self.behaviors['move_closer'].get() + self.behaviors['move_away'].get()
+                'wall_hit': self.advanced_penalties['wall_hit'].get(),
+                'revisit': self.advanced_penalties['revisit'].get(),
+                'loop': self.advanced_penalties['loop'].get(),
+                'distance': self.advanced_penalties['distance'].get()
             }
 
             # Create agent
@@ -1384,16 +1443,10 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
                     self.agent.update_q_table(state, action, reward, next_state, done)
 
-                    # Update grid visualization during training (throttled for better visibility)
+                    # Update grid visualization during training (throttled)
                     current_time = time.time()
-                    if self.show_live_grid.get() and (current_time - last_grid_update) > 0.15:
-                        # Send position, action taken, and reward for better visualization
-                        self.message_queue.put(("draw_grid_training", {
-                            'position': next_state,
-                            'action': action,
-                            'reward': reward,
-                            'episode': episode + 1
-                        }))
+                    if self.show_live_grid.get() and (current_time - last_grid_update) > 0.05:
+                        self.message_queue.put(("draw_grid_training", state))
                         last_grid_update = current_time
 
                     state = next_state
@@ -1546,9 +1599,6 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
             # Get parameters
             map_name = self.map_size.get()
-            # If using custom map, pass a dummy map_name (it will be ignored anyway)
-            if map_name == "Personnalisée":
-                map_name = "4x4"  # Dummy value, custom_map_path will be used instead
             is_slippery = str(self.is_slippery.get())
             delay = str(self.demo_speed.get())
 
@@ -1943,13 +1993,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                     pass  # Removed learning curve
 
                 elif msg_type == "draw_grid_training":
-                    # Draw grid during training with enhanced info
-                    if isinstance(data, dict):
-                        # New format with action, reward, etc.
-                        self.draw_grid(agent_pos=data['position'])
-                    else:
-                        # Old format - just position
-                        self.draw_grid(agent_pos=data)
+                    # Draw grid during training (just agent position, no extras)
+                    self.draw_grid(agent_pos=data)
 
                 elif msg_type == "draw_grid":
                     # Draw grid with agent at position
