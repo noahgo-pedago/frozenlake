@@ -92,52 +92,42 @@ pip install -r requirements.txt
 
 ## Usage
 
-### 🎓 Interface Graphique Interactive (RECOMMANDÉ pour les Étudiants!)
-
-Lancez l'interface graphique complète pour expérimenter avec les paramètres d'apprentissage:
+### 🎓 Interface Graphique Interactive (RECOMMANDÉ!)
 
 ```bash
-# Avec le script de lancement (plus simple)
-./run.sh  # ou run.bat sur Windows
-
-# Ou manuellement
-source venv/bin/activate
-python frozenlake_gui.py
+./run.sh          # Linux/Mac
+run.bat           # Windows CMD
+.\run.ps1         # Windows PowerShell
 ```
 
-**Fonctionnalités de l'Interface:**
+**Utilisation Simple en 3 Étapes:**
 
-- ⚙️ **Contrôles des Hyperparamètres** - Ajustez en temps réel:
+1. **Choisir un préréglage** (Débutant, Standard ou Optimal)
+2. **Cliquer sur "Démarrer l'Entraînement"**
+3. **Regarder la démo** une fois l'entraînement terminé
 
-  | Paramètre | Plage | Description |
-  |-----------|-------|-------------|
-  | Taux d'apprentissage (α) | 0.01 - 1.0 | Vitesse d'apprentissage de l'agent |
-  | Facteur de discount (γ) | 0.0 - 1.0 | Importance des récompenses futures |
-  | Décroissance epsilon | 0.9 - 0.999 | Vitesse de transition exploration → exploitation |
-  | Nombre d'épisodes | 1000 - 50000 | Durée de l'entraînement |
-  | Taille de carte | 4x4 / 8x8 / Personnalisée | Complexité de l'environnement |
-  | Glace glissante | On/Off | Stochasticité des mouvements |
+**Préréglages Disponibles:**
 
-- 📊 **Statistiques en Temps Réel:**
-  - Progression de l'entraînement (barre de progression)
-  - Taux de réussite (%)
-  - Epsilon actuel (exploration vs exploitation)
-  - Récompense moyenne glissante
-  - Temps écoulé
-  - Graphique de progression en direct
+| Préréglage | Épisodes | Difficulté | Résultat attendu |
+|------------|----------|------------|------------------|
+| **Débutant** | 5000 | Facile | >90% réussite |
+| **Standard** | 10000 | Moyenne | 65-75% réussite |
+| **Optimal** | 15000 | Difficile | 75-85% réussite |
 
-- 🎮 **Préréglages Prêts à l'Emploi** (ne modifient pas la carte):
+**Fonctionnalités:**
 
-  | Préréglage | α | γ | ε decay | Épisodes |
-  |------------|---|---|---------|----------|
-  | **Débutant** | 0.2 | 0.95 | 0.997 | 5000 |
-  | **Standard** | 0.15 | 0.98 | 0.996 | 10000 |
-  | **Optimal** | 0.1 | 0.99 | 0.9965 | 15000 |
+- 🗺️ **Carte** - 4x4, 8x8 ou personnalisée
+- ❄️ **Glace glissante** - Active/désactive la stochasticité
+- 📊 **Statistiques en direct** - Progression, taux de réussite, temps
+- 📈 **Graphique** - Courbe d'apprentissage en temps réel
 
-- 🗺️ **Éditeur de Carte Personnalisée** - Créez vos propres environnements
-- 👁️ **Démo Visuelle Intégrée** - Regardez l'agent entraîné jouer
+**Contrôles de la Démo:**
 
-Cette interface est parfaite pour comprendre l'impact de chaque hyperparamètre sur l'apprentissage!
+| Contrôle | Description |
+|----------|-------------|
+| **Vitesse** | Curseur 0.05s - 1.0s (modifiable pendant la démo) |
+| **Max steps** | Limite de mouvements avant échec (10-200) |
+| **Stop Démo** | Arrêter la démo à tout moment |
 
 ### Visual Demo (Command Line)
 

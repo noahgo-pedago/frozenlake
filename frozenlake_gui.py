@@ -254,6 +254,7 @@ class FrozenLakeGUI:
         self.agent = None
         self.env = None
         self.is_training = False
+        self.is_demo_running = False
         self.training_thread = None
         self.message_queue = Queue()
         self.custom_map = None
@@ -845,20 +846,39 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         self.demo_button.grid(row=0, column=2, padx=5, pady=5)
         ToolTip(self.demo_button, "Animation de l'agent dans la grille ci-dessous")
 
+        self.stop_demo_button = ttk.Button(control_frame, text="⏹️ Stop Démo",
+                                           command=self.stop_demo, state=tk.DISABLED)
+        self.stop_demo_button.grid(row=0, column=3, padx=5, pady=5)
+        ToolTip(self.stop_demo_button, "Arrêter la démo en cours")
+
         self.pygame_button = ttk.Button(control_frame, text="🎮 Démo Pygame",
                                         command=self.show_pygame_demo, state=tk.DISABLED)
-        self.pygame_button.grid(row=0, column=3, padx=5, pady=5)
+        self.pygame_button.grid(row=0, column=4, padx=5, pady=5)
         ToolTip(self.pygame_button, "Ouvre une fenêtre de jeu pygame")
 
-        # Demo speed control
+        # Demo speed control (real-time)
         speed_label = ttk.Label(control_frame, text="Vitesse:")
-        speed_label.grid(row=0, column=4, padx=(20, 5))
-        ToolTip(speed_label, "Vitesse de la démo\n0.1 = très rapide\n1.0 = lent")
+        speed_label.grid(row=0, column=5, padx=(20, 5))
+        ToolTip(speed_label, "Vitesse de la démo (modifiable en temps réel)\n0.05 = très rapide\n1.0 = lent")
 
         self.demo_speed = tk.DoubleVar(value=0.3)
-        speed_combo = ttk.Combobox(control_frame, textvariable=self.demo_speed,
-                                  values=[0.1, 0.2, 0.3, 0.5, 1.0], state="readonly", width=8)
-        speed_combo.grid(row=0, column=5, padx=5)
+        speed_scale = ttk.Scale(control_frame, from_=0.05, to=1.0, variable=self.demo_speed,
+                               orient=tk.HORIZONTAL, length=100)
+        speed_scale.grid(row=0, column=6, padx=5)
+
+        self.speed_label_value = ttk.Label(control_frame, text="0.3s")
+        self.speed_label_value.grid(row=0, column=7, padx=(0, 10))
+        self.demo_speed.trace_add("write", lambda *args: self.speed_label_value.config(text=f"{self.demo_speed.get():.2f}s"))
+
+        # Max steps control
+        steps_label = ttk.Label(control_frame, text="Max steps:")
+        steps_label.grid(row=0, column=8, padx=(10, 5))
+        ToolTip(steps_label, "Nombre maximum de mouvements avant échec")
+
+        self.demo_max_steps = tk.IntVar(value=50)
+        steps_spinbox = ttk.Spinbox(control_frame, from_=10, to=200, increment=10,
+                                    textvariable=self.demo_max_steps, width=5)
+        steps_spinbox.grid(row=0, column=9, padx=5)
 
         # Live visualization always enabled (no toggle)
         self.show_live_grid = tk.BooleanVar(value=True)
@@ -1498,8 +1518,16 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             return
 
         self.log("\n🎬 Lancement de la démo dans la grille...")
+        self.log("   (Ajustez la vitesse en temps réel avec le curseur)")
+        self.is_demo_running = True
         self.demo_button.config(state=tk.DISABLED)
+        self.stop_demo_button.config(state=tk.NORMAL)
         threading.Thread(target=self.run_grid_demo, daemon=True).start()
+
+    def stop_demo(self):
+        """Stop the running demo."""
+        self.is_demo_running = False
+        self.log("⏹️ Arrêt de la démo demandé...")
 
     def show_pygame_demo(self):
         """Show pygame demo with the trained agent (game window)."""
@@ -1781,11 +1809,15 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
     def run_grid_demo(self):
         """Run visual demo with animation in the grid (in separate thread)."""
         try:
-            delay = self.demo_speed.get()
             action_names = {0: "←GAUCHE", 1: "↓BAS", 2: "→DROITE", 3: "↑HAUT"}
             successes = 0
+            max_steps = self.demo_max_steps.get()
 
             for episode in range(5):
+                if not self.is_demo_running:
+                    self.message_queue.put(("log", "⏹️ Démo arrêtée par l'utilisateur"))
+                    break
+
                 state, info = self.env.reset()
                 self.message_queue.put(("log", f"\n🎮 Démo Épisode {episode + 1}/5"))
                 self.message_queue.put(("draw_grid", state))  # Show initial position
@@ -1794,8 +1826,14 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 step = 0
                 path = [state]
 
-                while not done and step < 100:  # Safety limit
+                while not done and step < max_steps and self.is_demo_running:
+                    # Read speed in real-time
+                    delay = self.demo_speed.get()
                     time.sleep(delay)
+
+                    if not self.is_demo_running:
+                        break
+
                     action = np.argmax(self.agent.q_table[state])
                     self.message_queue.put(("log", f"   Step {step + 1}: {action_names[action]}"))
 
@@ -1818,11 +1856,14 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                     state = next_state
                     step += 1
 
-            self.message_queue.put(("log", f"\n🏁 Démo terminée! Succès: {successes}/5 ({successes*20}%)"))
+            if self.is_demo_running:
+                self.message_queue.put(("log", f"\n🏁 Démo terminée! Succès: {successes}/5 ({successes*20}%)"))
+            self.is_demo_running = False
             self.message_queue.put(("demo_complete", None))
 
         except Exception as e:
             self.message_queue.put(("log", f"❌ Erreur démo: {str(e)}"))
+            self.is_demo_running = False
             self.message_queue.put(("demo_complete", None))
 
     def check_queue(self):
@@ -1954,6 +1995,7 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
                 elif msg_type == "demo_complete":
                     self.demo_button.config(state=tk.NORMAL)
+                    self.stop_demo_button.config(state=tk.DISABLED)
                     # Show final grid with Q-values
                     if self.agent:
                         self.draw_grid(show_values=True)
