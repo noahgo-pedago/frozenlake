@@ -1,0 +1,173 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed --name "FrozenLake-QLearning" --icon=NONE --add-data "frozenlake_qlearning.py;." --add-data "frozenlake_random.py;." --add-data "frozenlake_visual_demo.py;." frozenlake_gui.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrozenLake-Windows
+          path: dist/FrozenLake-QLearning.exe
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed --name "FrozenLake-QLearning" --add-data "frozenlake_qlearning.py:." --add-data "frozenlake_random.py:." --add-data "frozenlake_visual_demo.py:." frozenlake_gui.py
+
+      - name: Create zip
+        run: |
+          cd dist
+          zip -r FrozenLake-macOS.zip FrozenLake-QLearning.app || zip -r FrozenLake-macOS.zip FrozenLake-QLearning
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrozenLake-macOS
+          path: dist/FrozenLake-macOS.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --name "FrozenLake-QLearning" --add-data "frozenlake_qlearning.py:." --add-data "frozenlake_random.py:." --add-data "frozenlake_visual_demo.py:." frozenlake_gui.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrozenLake-Linux
+          path: dist/FrozenLake-QLearning
+
+  create-release:
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: FrozenLake-Windows
+          path: ./windows
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: FrozenLake-macOS
+          path: ./macos
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: FrozenLake-Linux
+          path: ./linux
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: FrozenLake Q-Learning Lab ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## FrozenLake Q-Learning Lab
+
+            Application d'apprentissage par renforcement avec interface graphique.
+
+            ### Téléchargements
+
+            | Plateforme | Fichier |
+            |------------|---------|
+            | Windows | `FrozenLake-QLearning.exe` |
+            | macOS | `FrozenLake-macOS.zip` |
+            | Linux | `FrozenLake-QLearning` |
+
+            ### Installation
+
+            **Windows:** Téléchargez et exécutez `FrozenLake-QLearning.exe`
+
+            **macOS:** Téléchargez, décompressez et exécutez l'application
+
+            **Linux:** Téléchargez, rendez exécutable (`chmod +x`) et lancez
+
+            ### Prérequis
+
+            Aucun prérequis - tout est inclus dans l'exécutable!
+          draft: false
+          prerelease: false
+          files: |
+            windows/FrozenLake-QLearning.exe
+            macos/FrozenLake-macOS.zip
+            linux/FrozenLake-QLearning

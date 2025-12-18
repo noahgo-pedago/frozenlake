@@ -252,6 +252,37 @@ env = gym.make("FrozenLake-v1", is_slippery=False)
 
 The Q-learning agent significantly outperforms random actions by learning optimal paths.
 
+## Releases
+
+### Télécharger l'Application
+
+Des exécutables pré-compilés sont disponibles dans les [Releases](../../releases):
+
+| Plateforme | Fichier |
+|------------|---------|
+| Windows | `FrozenLake-QLearning.exe` |
+| macOS | `FrozenLake-macOS.zip` |
+| Linux | `FrozenLake-QLearning` |
+
+**Aucune installation requise** - tout est inclus dans l'exécutable!
+
+### Créer une Release
+
+Pour créer une nouvelle release:
+
+1. **Via tag Git:**
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+2. **Via GitHub Actions:**
+   - Aller dans Actions > "Build and Release"
+   - Cliquer "Run workflow"
+   - Entrer la version (ex: v1.0.0)
+
+Le CI/CD génère automatiquement les exécutables pour Windows, macOS et Linux.
+
 ## Resources
 
 - [Gymnasium FrozenLake Documentation](https://gymnasium.farama.org/environments/toy_text/frozen_lake/)
