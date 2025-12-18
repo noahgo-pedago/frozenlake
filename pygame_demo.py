@@ -10,6 +10,12 @@ import gymnasium as gym
 import numpy as np
 import pygame
 import time
+import io
+
+# Fix Windows console encoding for emojis
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 
 def show_result_screen(screen, success, episode, total_episodes, steps):
@@ -160,7 +166,7 @@ def run_demo(q_table_path, map_name, is_slippery, delay, custom_map_path=None):
             break
 
         state, info = env.reset()
-        print(f"\n🎮 Épisode {episode + 1}/5")
+        print(f"\n[DEMO] Episode {episode + 1}/5")
         done = False
         step = 0
 
@@ -169,7 +175,7 @@ def run_demo(q_table_path, map_name, is_slippery, delay, custom_map_path=None):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     quit_requested = True
-                    print("🛑 Fermeture demandée")
+                    print("[STOP] Fermeture demandee")
                     break
 
             if quit_requested:
@@ -184,12 +190,12 @@ def run_demo(q_table_path, map_name, is_slippery, delay, custom_map_path=None):
 
             if done:
                 if reward > 0:
-                    print(f"   ✅ SUCCÈS en {step + 1} étapes!")
+                    print(f"   [OK] SUCCES en {step + 1} etapes!")
                     if pygame_window:
                         show_result_screen(pygame_window, True, episode + 1, 5, step + 1)
                     successes += 1
                 else:
-                    print(f"   ❌ DÉFAITE après {step + 1} étapes")
+                    print(f"   [X] DEFAITE apres {step + 1} etapes")
                     if pygame_window:
                         show_result_screen(pygame_window, False, episode + 1, 5, step + 1)
 
@@ -207,7 +213,7 @@ def run_demo(q_table_path, map_name, is_slippery, delay, custom_map_path=None):
             state = next_state
             step += 1
 
-    print(f"\n🏁 Démo terminée! Succès: {successes}/5 ({successes*20}%)")
+    print(f"\n[FIN] Demo terminee! Succes: {successes}/5 ({successes*20}%)")
     env.close()
 
 
