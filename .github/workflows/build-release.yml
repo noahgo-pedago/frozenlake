@@ -26,12 +26,29 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
+          pip install gymnasium numpy pygame-ce matplotlib
           pip install pyinstaller
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --windowed --name "FrozenLake-QLearning" --icon=NONE --add-data "frozenlake_qlearning.py;." --add-data "frozenlake_random.py;." --add-data "frozenlake_visual_demo.py;." frozenlake_gui.py
+          pyinstaller --onefile --windowed --name "FrozenLake-QLearning" `
+            --hidden-import=gymnasium `
+            --hidden-import=gymnasium.envs `
+            --hidden-import=gymnasium.envs.toy_text `
+            --hidden-import=gymnasium.envs.toy_text.frozen_lake `
+            --hidden-import=numpy `
+            --hidden-import=pygame `
+            --hidden-import=matplotlib `
+            --hidden-import=matplotlib.backends.backend_tkagg `
+            --hidden-import=PIL `
+            --hidden-import=PIL._tkinter_finder `
+            --collect-all=gymnasium `
+            --collect-all=pygame `
+            --add-data "frozenlake_qlearning.py;." `
+            --add-data "frozenlake_random.py;." `
+            --add-data "frozenlake_visual_demo.py;." `
+            --add-data "pygame_demo.py;." `
+            frozenlake_gui.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -53,12 +70,29 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
+          pip install gymnasium numpy pygame-ce matplotlib
           pip install pyinstaller
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --windowed --name "FrozenLake-QLearning" --add-data "frozenlake_qlearning.py:." --add-data "frozenlake_random.py:." --add-data "frozenlake_visual_demo.py:." frozenlake_gui.py
+          pyinstaller --onefile --windowed --name "FrozenLake-QLearning" \
+            --hidden-import=gymnasium \
+            --hidden-import=gymnasium.envs \
+            --hidden-import=gymnasium.envs.toy_text \
+            --hidden-import=gymnasium.envs.toy_text.frozen_lake \
+            --hidden-import=numpy \
+            --hidden-import=pygame \
+            --hidden-import=matplotlib \
+            --hidden-import=matplotlib.backends.backend_tkagg \
+            --hidden-import=PIL \
+            --hidden-import=PIL._tkinter_finder \
+            --collect-all=gymnasium \
+            --collect-all=pygame \
+            --add-data "frozenlake_qlearning.py:." \
+            --add-data "frozenlake_random.py:." \
+            --add-data "frozenlake_visual_demo.py:." \
+            --add-data "pygame_demo.py:." \
+            frozenlake_gui.py
 
       - name: Create zip
         run: |
@@ -85,17 +119,34 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y python3-tk
+          sudo apt-get install -y python3-tk libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install -r requirements.txt
+          pip install gymnasium numpy pygame-ce matplotlib
           pip install pyinstaller
 
       - name: Build executable
         run: |
-          pyinstaller --onefile --name "FrozenLake-QLearning" --add-data "frozenlake_qlearning.py:." --add-data "frozenlake_random.py:." --add-data "frozenlake_visual_demo.py:." frozenlake_gui.py
+          pyinstaller --onefile --name "FrozenLake-QLearning" \
+            --hidden-import=gymnasium \
+            --hidden-import=gymnasium.envs \
+            --hidden-import=gymnasium.envs.toy_text \
+            --hidden-import=gymnasium.envs.toy_text.frozen_lake \
+            --hidden-import=numpy \
+            --hidden-import=pygame \
+            --hidden-import=matplotlib \
+            --hidden-import=matplotlib.backends.backend_tkagg \
+            --hidden-import=PIL \
+            --hidden-import=PIL._tkinter_finder \
+            --collect-all=gymnasium \
+            --collect-all=pygame \
+            --add-data "frozenlake_qlearning.py:." \
+            --add-data "frozenlake_random.py:." \
+            --add-data "frozenlake_visual_demo.py:." \
+            --add-data "pygame_demo.py:." \
+            frozenlake_gui.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -146,7 +197,7 @@ jobs:
 
             Application d'apprentissage par renforcement avec interface graphique.
 
-            ### Téléchargements
+            ### Telechargements
 
             | Plateforme | Fichier |
             |------------|---------|
@@ -156,15 +207,15 @@ jobs:
 
             ### Installation
 
-            **Windows:** Téléchargez et exécutez `FrozenLake-QLearning.exe`
+            **Windows:** Telechargez et executez `FrozenLake-QLearning.exe`
 
-            **macOS:** Téléchargez, décompressez et exécutez l'application
+            **macOS:** Telechargez, decompressez et executez l'application
 
-            **Linux:** Téléchargez, rendez exécutable (`chmod +x`) et lancez
+            **Linux:** Telechargez, rendez executable (`chmod +x`) et lancez
 
-            ### Prérequis
+            ### Prerequis
 
-            Aucun prérequis - tout est inclus dans l'exécutable!
+            Aucun prerequis - tout est inclus dans l'executable!
           draft: false
           prerelease: false
           files: |
