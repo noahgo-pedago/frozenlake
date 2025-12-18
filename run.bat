@@ -50,6 +50,8 @@ if not exist "venv" (
     echo.
     echo Installation des dependances...
     call venv\Scripts\activate.bat
+    echo Mise a jour de pip et setuptools...
+    python -m pip install --upgrade pip setuptools wheel -q
     pip install -q -r requirements.txt
     if %errorlevel% neq 0 (
         echo [ERROR] Echec de l'installation des dependances.

@@ -56,6 +56,8 @@ if (-not (Test-Path "venv")) {
     # Activate venv
     & ".\venv\Scripts\Activate.ps1"
 
+    Write-Host "Mise a jour de pip et setuptools..."
+    & python -m pip install --upgrade pip setuptools wheel -q
     & pip install -q -r requirements.txt
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[ERROR] Echec de l'installation des dependances." -ForegroundColor Red
