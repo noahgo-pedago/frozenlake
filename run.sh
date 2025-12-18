@@ -126,7 +126,9 @@ if [ ! -d "venv" ]; then
     echo ""
     echo "Installation des dépendances..."
     source venv/bin/activate
-    pip install -q -r requirements.txt
+    echo "ℹ️  Mise à jour de pip et setuptools..."
+    python -m pip install --upgrade pip setuptools wheel -q
+    pip install --only-binary pygame-ce -q -r requirements.txt
     echo "✅ Dépendances installées!"
 else
     echo "✅ Virtual environment trouvé!"

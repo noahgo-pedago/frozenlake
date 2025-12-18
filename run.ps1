@@ -58,7 +58,7 @@ if (-not (Test-Path "venv")) {
 
     Write-Host "Mise a jour de pip et setuptools..."
     & python -m pip install --upgrade pip setuptools wheel -q
-    & pip install -q -r requirements.txt
+    & pip install --only-binary pygame-ce -q -r requirements.txt
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[ERROR] Echec de l'installation des dependances." -ForegroundColor Red
         Read-Host "Appuyez sur Entree pour quitter"
