@@ -1538,8 +1538,15 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         self.log("\n🎮 Lancement de la démo Pygame (fenêtre séparée)...")
         self.pygame_button.config(state=tk.DISABLED)
 
-        # Use subprocess instead of threading to avoid macOS crash
-        threading.Thread(target=self.run_pygame_demo_subprocess, daemon=True).start()
+        # Check if running from PyInstaller bundle
+        is_frozen = getattr(sys, 'frozen', False)
+
+        if is_frozen:
+            # Running from exe - use direct method (subprocess won't work)
+            threading.Thread(target=self.run_pygame_demo, daemon=True).start()
+        else:
+            # Running from Python - use subprocess to avoid macOS crash
+            threading.Thread(target=self.run_pygame_demo_subprocess, daemon=True).start()
 
     def run_pygame_demo_subprocess(self):
         """Run pygame demo in a separate process (macOS compatible)."""
