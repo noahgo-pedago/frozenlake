@@ -18,7 +18,8 @@ FrozenLake is a classic grid-world environment where an agent must navigate acro
 frozenlake/
 ├── requirements.txt           # Project dependencies
 ├── run.sh                    # 🚀 Script de lancement rapide (Linux/Mac)
-├── run.bat                   # 🚀 Script de lancement rapide (Windows)
+├── run.bat                   # 🚀 Script de lancement rapide (Windows CMD)
+├── run.ps1                   # 🚀 Script de lancement rapide (Windows PowerShell)
 ├── frozenlake_gui.py         # 🎓 Interface graphique interactive (RECOMMANDÉ!)
 ├── frozenlake_qlearning.py   # Q-learning agent implementation
 ├── frozenlake_random.py      # Random baseline agent
@@ -35,9 +36,23 @@ frozenlake/
 ```
 
 ### Windows:
-```bash
+
+**Option 1 - Command Prompt (CMD):**
+```cmd
 run.bat
 ```
+Double-cliquez sur `run.bat` ou exécutez-le depuis CMD.
+
+**Option 2 - PowerShell (recommandé):**
+```powershell
+.\run.ps1
+```
+Clic-droit sur `run.ps1` → "Exécuter avec PowerShell"
+
+> **Note PowerShell:** Si vous obtenez une erreur d'exécution de script, exécutez d'abord:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+> ```
 
 Ces scripts vont automatiquement:
 - ✅ Créer le virtual environment (si nécessaire)
@@ -91,26 +106,35 @@ python frozenlake_gui.py
 ```
 
 **Fonctionnalités de l'Interface:**
+
 - ⚙️ **Contrôles des Hyperparamètres** - Ajustez en temps réel:
-  - Taux d'apprentissage (α)
-  - Facteur de discount (γ)
-  - Décroissance epsilon
-  - Nombre d'épisodes
-  - Taille de carte (4x4 ou 8x8)
-  - Glace glissante on/off
+
+  | Paramètre | Plage | Description |
+  |-----------|-------|-------------|
+  | Taux d'apprentissage (α) | 0.01 - 1.0 | Vitesse d'apprentissage de l'agent |
+  | Facteur de discount (γ) | 0.0 - 1.0 | Importance des récompenses futures |
+  | Décroissance epsilon | 0.9 - 0.999 | Vitesse de transition exploration → exploitation |
+  | Nombre d'épisodes | 1000 - 50000 | Durée de l'entraînement |
+  | Taille de carte | 4x4 / 8x8 / Personnalisée | Complexité de l'environnement |
+  | Glace glissante | On/Off | Stochasticité des mouvements |
 
 - 📊 **Statistiques en Temps Réel:**
-  - Progression de l'entraînement
-  - Taux de réussite
-  - Epsilon actuel
-  - Récompense moyenne
+  - Progression de l'entraînement (barre de progression)
+  - Taux de réussite (%)
+  - Epsilon actuel (exploration vs exploitation)
+  - Récompense moyenne glissante
   - Temps écoulé
+  - Graphique de progression en direct
 
 - 🎮 **Préréglages Prêts à l'Emploi:**
-  - **Débutant** - Apprentissage rapide sans glace
-  - **Rapide** - Entraînement accéléré
-  - **Optimal** - Meilleure performance finale
 
+  | Préréglage | α | γ | ε decay | Épisodes | Glissant | Résultat attendu |
+  |------------|---|---|---------|----------|----------|------------------|
+  | **Débutant** | 0.2 | 0.95 | 0.997 | 5000 | Non | >90% réussite |
+  | **Standard** | 0.15 | 0.98 | 0.996 | 10000 | Oui | 65-75% réussite |
+  | **Optimal** | 0.1 | 0.99 | 0.9965 | 15000 | Oui | 75-85% réussite |
+
+- 🗺️ **Éditeur de Carte Personnalisée** - Créez vos propres environnements
 - 👁️ **Démo Visuelle Intégrée** - Regardez l'agent entraîné jouer
 
 Cette interface est parfaite pour comprendre l'impact de chaque hyperparamètre sur l'apprentissage!
@@ -189,6 +213,14 @@ Default parameters in `frozenlake_qlearning.py`:
 - **Epsilon Decay:** 0.995
 - **Minimum Epsilon:** 0.01
 - **Training Episodes:** 10,000
+
+**Comprendre les Hyperparamètres:**
+
+| Paramètre | Effet si trop bas | Effet si trop haut |
+|-----------|-------------------|-------------------|
+| **Learning Rate (α)** | Apprentissage très lent | Apprentissage instable, oscillations |
+| **Discount Factor (γ)** | Agent myope, ignore le futur | Peut survaloriser des chemins longs |
+| **Epsilon Decay** | Reste en exploration trop longtemps | Exploite trop tôt, manque de solutions |
 
 ## Customization
 
