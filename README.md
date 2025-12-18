@@ -126,13 +126,13 @@ python frozenlake_gui.py
   - Temps écoulé
   - Graphique de progression en direct
 
-- 🎮 **Préréglages Prêts à l'Emploi:**
+- 🎮 **Préréglages Prêts à l'Emploi** (ne modifient pas la carte):
 
-  | Préréglage | α | γ | ε decay | Épisodes | Glissant | Résultat attendu |
-  |------------|---|---|---------|----------|----------|------------------|
-  | **Débutant** | 0.2 | 0.95 | 0.997 | 5000 | Non | >90% réussite |
-  | **Standard** | 0.15 | 0.98 | 0.996 | 10000 | Oui | 65-75% réussite |
-  | **Optimal** | 0.1 | 0.99 | 0.9965 | 15000 | Oui | 75-85% réussite |
+  | Préréglage | α | γ | ε decay | Épisodes |
+  |------------|---|---|---------|----------|
+  | **Débutant** | 0.2 | 0.95 | 0.997 | 5000 |
+  | **Standard** | 0.15 | 0.98 | 0.996 | 10000 |
+  | **Optimal** | 0.1 | 0.99 | 0.9965 | 15000 |
 
 - 🗺️ **Éditeur de Carte Personnalisée** - Créez vos propres environnements
 - 👁️ **Démo Visuelle Intégrée** - Regardez l'agent entraîné jouer

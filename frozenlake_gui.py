@@ -1215,13 +1215,9 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         self.epsilon_decay.set(0.997)
         self.episodes.set(5000)
         self.update_frequency.set(50)
-        self.map_size.set("4x4")
-        self.is_slippery.set(False)  # NO SLIPPERY!
-        self.on_map_size_change()
         self.log("\n🎓 PRÉRÉGLAGE DÉBUTANT chargé")
-        self.log("   • Sans glace glissante (plus facile!)")
+        self.log("   • α=0.2, γ=0.95, ε decay=0.997")
         self.log("   • 5000 épisodes (rapide)")
-        self.log("   • Résultat attendu: >90% de réussite")
         self.log("   ➡️  Cliquez sur '🚀 Démarrer l'Entraînement'")
 
     def preset_standard(self):
@@ -1231,13 +1227,9 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         self.epsilon_decay.set(0.996)
         self.episodes.set(10000)
         self.update_frequency.set(100)
-        self.map_size.set("4x4")
-        self.is_slippery.set(True)  # WITH SLIPPERY
-        self.on_map_size_change()
         self.log("\n⚡ PRÉRÉGLAGE STANDARD chargé")
-        self.log("   • Avec glace glissante (plus difficile)")
+        self.log("   • α=0.15, γ=0.98, ε decay=0.996")
         self.log("   • 10000 épisodes")
-        self.log("   • Résultat attendu: 65-75% de réussite")
 
     def preset_optimal(self):
         """Load optimal preset."""
@@ -1246,13 +1238,9 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         self.epsilon_decay.set(0.9965)
         self.episodes.set(15000)
         self.update_frequency.set(100)
-        self.map_size.set("4x4")
-        self.is_slippery.set(True)
-        self.on_map_size_change()
         self.log("\n🎯 PRÉRÉGLAGE OPTIMAL chargé")
-        self.log("   • Avec glace glissante")
+        self.log("   • α=0.1, γ=0.99, ε decay=0.9965")
         self.log("   • 15000 épisodes (plus long)")
-        self.log("   • Résultat attendu: 75-85% de réussite")
 
     def start_training(self):
         """Start training in a separate thread."""
