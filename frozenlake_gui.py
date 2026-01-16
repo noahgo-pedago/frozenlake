@@ -557,11 +557,21 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         map_combo.bind('<<ComboboxSelected>>', self.on_map_size_change)
         row += 1
 
-        # Custom map button - ALWAYS ENABLED NOW
-        self.random_map_button = ttk.Button(params_frame, text="✏️ Créer ma propre carte",
+        # Map buttons frame
+        map_buttons_frame = ttk.Frame(params_frame)
+        map_buttons_frame.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
+        map_buttons_frame.columnconfigure(0, weight=1)
+        map_buttons_frame.columnconfigure(1, weight=1)
+
+        self.random_map_button = ttk.Button(map_buttons_frame, text="🎲 Aléatoire",
                                            command=self.generate_random_map)
-        self.random_map_button.grid(row=row, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=5)
-        ToolTip(self.random_map_button, "Créez une carte personnalisée de n'importe quelle taille (4x4 à 12x12)")
+        self.random_map_button.grid(row=0, column=0, sticky=(tk.W, tk.E), padx=(0, 2))
+        ToolTip(self.random_map_button, "Générer une carte aléatoire (4x4 à 12x12)")
+
+        self.edit_map_button = ttk.Button(map_buttons_frame, text="✏️ Éditer",
+                                         command=self.edit_map_manual)
+        self.edit_map_button.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(2, 0))
+        ToolTip(self.edit_map_button, "Éditer la carte manuellement en cliquant sur les cases")
         row += 1
 
         # Show status of custom map
@@ -856,17 +866,17 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
         self.pygame_button.grid(row=0, column=4, padx=5, pady=5)
         ToolTip(self.pygame_button, "Ouvre une fenêtre de jeu pygame")
 
-        # Demo speed control (real-time)
+        # Demo speed control (real-time) - inverted: right = fast, left = slow
         speed_label = ttk.Label(control_frame, text="Vitesse:")
         speed_label.grid(row=0, column=5, padx=(20, 5))
-        ToolTip(speed_label, "Vitesse de la démo (modifiable en temps réel)\n0.05 = très rapide\n1.0 = lent")
+        ToolTip(speed_label, "Vitesse de la démo (modifiable en temps réel)\n← Lent | Rapide →")
 
         self.demo_speed = tk.DoubleVar(value=0.3)
-        speed_scale = ttk.Scale(control_frame, from_=0.05, to=1.0, variable=self.demo_speed,
+        speed_scale = ttk.Scale(control_frame, from_=1.0, to=0.05, variable=self.demo_speed,
                                orient=tk.HORIZONTAL, length=100)
         speed_scale.grid(row=0, column=6, padx=5)
 
-        self.speed_label_value = ttk.Label(control_frame, text="0.3s")
+        self.speed_label_value = ttk.Label(control_frame, text="0.30s")
         self.speed_label_value.grid(row=0, column=7, padx=(0, 10))
         self.demo_speed.trace_add("write", lambda *args: self.speed_label_value.config(text=f"{self.demo_speed.get():.2f}s"))
 
@@ -1018,19 +1028,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 self.root.after_cancel(self._resize_job)
             self._resize_job = self.root.after(100, lambda: self.draw_grid())
 
-    def draw_grid(self, agent_pos=None, path=None, show_values=False):
+    def draw_grid(self, agent_pos=None, path=None, show_values=False, preview_only=False):
         """Draw the FrozenLake grid with agent position."""
-        if not self.env:
-            # Draw placeholder
-            self.grid_canvas.delete("all")
-            width = self.grid_canvas.winfo_width()
-            height = self.grid_canvas.winfo_height()
-            if width > 10 and height > 10:
-                self.grid_canvas.create_text(width/2, height/2,
-                    text="La grille apparaîtra après l'entraînement",
-                    fill='white', font=('Arial', 12))
-            return
-
         self.grid_canvas.delete("all")
         width = self.grid_canvas.winfo_width()
         height = self.grid_canvas.winfo_height()
@@ -1046,6 +1045,12 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             if map_name == "8x8":
                 desc = ["SFFFFFFF", "FFFFFFFF", "FFFHFFFF", "FFFFFHFF",
                         "FFFHFFFF", "FHHFFFHF", "FHFFHFHF", "FFFHFFFG"]
+            elif map_name == "Personnalisée":
+                # No custom map yet, show placeholder
+                self.grid_canvas.create_text(width/2, height/2,
+                    text="Cliquez sur 'Créer ma propre carte'\npour générer ou éditer une carte",
+                    fill='white', font=('Arial', 12), justify='center')
+                return
             else:  # 4x4
                 desc = ["SFFF", "FHFH", "FFFH", "HFFG"]
 
@@ -1153,6 +1158,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             self.custom_map = None
             self.custom_map_status.config(text="")
             self.log("ℹ️ Carte personnalisée désactivée")
+        # Update grid preview
+        self.draw_grid()
 
     def generate_random_map(self):
         """Generate a random map."""
@@ -1205,6 +1212,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                         # Update UI - SET TO CUSTOM AND SHOW STATUS
                         self.map_size.set("Personnalisée")
                         self.custom_map_status.config(text=f"✓ Carte {size}x{size} créée!")
+                        # Update grid display immediately
+                        self.draw_grid()
 
                         dialog.destroy()
                         return
@@ -1220,6 +1229,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 # Update UI
                 self.map_size.set("Personnalisée")
                 self.custom_map_status.config(text=f"✓ Carte {size}x{size} créée!")
+                # Update grid display immediately
+                self.draw_grid()
 
                 dialog.destroy()
 
@@ -1227,6 +1238,205 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
         except Exception as e:
             self.log(f"❌ Erreur génération carte: {e}")
+
+    def edit_map_manual(self):
+        """Open a manual map editor dialog."""
+        try:
+            dialog = tk.Toplevel(self.root)
+            dialog.title("Éditeur de Carte")
+            dialog.geometry("500x600")
+            dialog.resizable(True, True)
+            dialog.transient(self.root)
+            dialog.grab_set()
+
+            # Instructions
+            ttk.Label(dialog, text="Éditeur de Carte Manuel", font=('Arial', 14, 'bold')).pack(pady=10)
+            ttk.Label(dialog, text="Cliquez sur les cases pour changer leur type", font=('Arial', 10)).pack()
+
+            # Size selector
+            size_frame = ttk.Frame(dialog)
+            size_frame.pack(pady=10)
+            ttk.Label(size_frame, text="Taille:").pack(side=tk.LEFT, padx=5)
+
+            # Determine initial size
+            if self.custom_map:
+                initial_size = len(self.custom_map)
+            else:
+                map_name = self.map_size.get()
+                initial_size = 8 if map_name == "8x8" else 4
+
+            size_var = tk.IntVar(value=initial_size)
+            size_combo = ttk.Combobox(size_frame, textvariable=size_var,
+                                     values=[4, 5, 6, 7, 8, 9, 10, 11, 12], state="readonly", width=5)
+            size_combo.pack(side=tk.LEFT)
+
+            # Legend
+            legend_frame = ttk.Frame(dialog)
+            legend_frame.pack(pady=5)
+            ttk.Label(legend_frame, text="S=Départ", foreground='#3498db', font=('Arial', 9, 'bold')).pack(side=tk.LEFT, padx=5)
+            ttk.Label(legend_frame, text="G=Arrivée", foreground='#27ae60', font=('Arial', 9, 'bold')).pack(side=tk.LEFT, padx=5)
+            ttk.Label(legend_frame, text="F=Glace", foreground='#7f8c8d', font=('Arial', 9, 'bold')).pack(side=tk.LEFT, padx=5)
+            ttk.Label(legend_frame, text="H=Trou", foreground='#c0392b', font=('Arial', 9, 'bold')).pack(side=tk.LEFT, padx=5)
+
+            # Canvas for editing
+            canvas_frame = ttk.Frame(dialog)
+            canvas_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+            edit_canvas = tk.Canvas(canvas_frame, bg='#2c3e50', highlightthickness=0)
+            edit_canvas.pack(fill=tk.BOTH, expand=True)
+
+            # Initialize map data
+            if self.custom_map and len(self.custom_map) == initial_size:
+                map_data = [list(row) for row in self.custom_map]
+            else:
+                # Create default map
+                size = initial_size
+                map_data = [['F' for _ in range(size)] for _ in range(size)]
+                map_data[0][0] = 'S'
+                map_data[size-1][size-1] = 'G'
+
+            def draw_edit_grid():
+                edit_canvas.delete("all")
+                canvas_width = edit_canvas.winfo_width()
+                canvas_height = edit_canvas.winfo_height()
+
+                if canvas_width < 50 or canvas_height < 50:
+                    return
+
+                size = len(map_data)
+                margin = 10
+                cell_size = min((canvas_width - 2*margin) / size, (canvas_height - 2*margin) / size)
+                start_x = margin + (canvas_width - 2*margin - cell_size*size) / 2
+                start_y = margin + (canvas_height - 2*margin - cell_size*size) / 2
+
+                for row in range(size):
+                    for col in range(size):
+                        x1 = start_x + col * cell_size
+                        y1 = start_y + row * cell_size
+                        x2 = x1 + cell_size
+                        y2 = y1 + cell_size
+
+                        cell = map_data[row][col]
+                        if cell == 'S':
+                            color = '#3498db'
+                            text_color = 'white'
+                        elif cell == 'G':
+                            color = '#2ecc71'
+                            text_color = 'white'
+                        elif cell == 'H':
+                            color = '#e74c3c'
+                            text_color = 'white'
+                        else:  # F
+                            color = '#ecf0f1'
+                            text_color = '#2c3e50'
+
+                        edit_canvas.create_rectangle(x1, y1, x2, y2,
+                            fill=color, outline='#2c3e50', width=2,
+                            tags=f"cell_{row}_{col}")
+
+                        edit_canvas.create_text(x1 + cell_size/2, y1 + cell_size/2,
+                            text=cell, font=('Arial', int(cell_size/2.5), 'bold'),
+                            fill=text_color, tags=f"text_{row}_{col}")
+
+            def on_canvas_click(event):
+                canvas_width = edit_canvas.winfo_width()
+                canvas_height = edit_canvas.winfo_height()
+                size = len(map_data)
+                margin = 10
+                cell_size = min((canvas_width - 2*margin) / size, (canvas_height - 2*margin) / size)
+                start_x = margin + (canvas_width - 2*margin - cell_size*size) / 2
+                start_y = margin + (canvas_height - 2*margin - cell_size*size) / 2
+
+                col = int((event.x - start_x) / cell_size)
+                row = int((event.y - start_y) / cell_size)
+
+                if 0 <= row < size and 0 <= col < size:
+                    current = map_data[row][col]
+                    # Cycle: F -> H -> S -> G -> F
+                    cycle = {'F': 'H', 'H': 'S', 'S': 'G', 'G': 'F'}
+                    map_data[row][col] = cycle[current]
+                    draw_edit_grid()
+
+            def on_size_change(event=None):
+                nonlocal map_data
+                new_size = size_var.get()
+                old_size = len(map_data)
+
+                if new_size != old_size:
+                    # Create new map, preserving what we can
+                    new_map = [['F' for _ in range(new_size)] for _ in range(new_size)]
+
+                    # Copy old data
+                    for row in range(min(old_size, new_size)):
+                        for col in range(min(old_size, new_size)):
+                            new_map[row][col] = map_data[row][col]
+
+                    # Ensure S and G exist
+                    has_s = any('S' in row for row in new_map)
+                    has_g = any('G' in row for row in new_map)
+
+                    if not has_s:
+                        new_map[0][0] = 'S'
+                    if not has_g:
+                        new_map[new_size-1][new_size-1] = 'G'
+
+                    map_data = new_map
+                    draw_edit_grid()
+
+            size_combo.bind('<<ComboboxSelected>>', on_size_change)
+            edit_canvas.bind('<Button-1>', on_canvas_click)
+            edit_canvas.bind('<Configure>', lambda e: draw_edit_grid())
+
+            # Buttons
+            button_frame = ttk.Frame(dialog)
+            button_frame.pack(pady=10)
+
+            def validate_and_apply():
+                # Convert to tuple format
+                new_map = tuple(''.join(row) for row in map_data)
+
+                # Validate: must have exactly one S and one G
+                s_count = sum(row.count('S') for row in map_data)
+                g_count = sum(row.count('G') for row in map_data)
+
+                if s_count != 1:
+                    self.log(f"❌ La carte doit avoir exactement 1 départ (S), trouvé: {s_count}")
+                    return
+                if g_count != 1:
+                    self.log(f"❌ La carte doit avoir exactement 1 arrivée (G), trouvé: {g_count}")
+                    return
+
+                # Check for valid path
+                grid = [list(row) for row in new_map]
+                if not has_valid_path(grid):
+                    self.log("⚠️ Attention: Aucun chemin valide de S à G!")
+                    self.log("   La carte sera quand même appliquée.")
+
+                self.custom_map = new_map
+                self.map_size.set("Personnalisée")
+                self.custom_map_status.config(text=f"✓ Carte {len(map_data)}x{len(map_data)} éditée!")
+                self.draw_grid()
+                self.log(f"\n✏️ Carte personnalisée appliquée ({len(map_data)}x{len(map_data)})")
+                for row in new_map:
+                    self.log(f"  {row}")
+                dialog.destroy()
+
+            def reset_map():
+                nonlocal map_data
+                size = size_var.get()
+                map_data = [['F' for _ in range(size)] for _ in range(size)]
+                map_data[0][0] = 'S'
+                map_data[size-1][size-1] = 'G'
+                draw_edit_grid()
+
+            ttk.Button(button_frame, text="✓ Appliquer", command=validate_and_apply).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="↺ Réinitialiser", command=reset_map).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="✕ Annuler", command=dialog.destroy).pack(side=tk.LEFT, padx=5)
+
+            # Initial draw after dialog is displayed
+            dialog.after(100, draw_edit_grid)
+
+        except Exception as e:
+            self.log(f"❌ Erreur éditeur: {e}")
 
     def preset_beginner(self):
         """Load beginner preset - GUARANTEED TO WORK!"""
@@ -1607,8 +1817,11 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             self.message_queue.put(("log", f"❌ Erreur pygame: {str(e)}"))
             self.message_queue.put(("pygame_complete", None))
 
-    def show_result_screen(self, screen, success, episode, total_episodes, steps):
-        """Display victory/defeat overlay on pygame window."""
+    def show_result_screen(self, screen, success, episode, total_episodes, steps, reason="hole"):
+        """Display victory/defeat overlay on pygame window.
+
+        reason can be: "victory", "hole", or "timeout"
+        """
         import pygame
 
         # Get screen dimensions
@@ -1641,8 +1854,17 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
             title_text = "VICTOIRE!"
             emoji = "🎉"
             subtitle_text = f"But atteint en {steps} étape{'s' if steps > 1 else ''}!"
+        elif reason == "timeout":
+            # Timeout screen - orange/yellow
+            bg_color = (180, 100, 0)  # Dark orange
+            border_color = (255, 165, 0)  # Orange
+            title_color = (255, 255, 200)  # Light yellow
+
+            title_text = "TEMPS ÉCOULÉ"
+            emoji = "⏱️"
+            subtitle_text = f"Limite de {steps} étapes atteinte!"
         else:
-            # Defeat screen - clear but not too aggressive
+            # Defeat screen (hole) - red
             bg_color = (139, 0, 0)  # Dark red
             border_color = (220, 20, 60)  # Crimson
             title_color = (255, 200, 200)  # Light pink
@@ -1743,6 +1965,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 # Get display surface directly
                 pygame_window = pygame.display.get_surface()
 
+            max_steps = self.demo_max_steps.get()
+
             for episode in range(5):
                 if quit_requested:
                     break
@@ -1752,7 +1976,7 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                 done = False
                 step = 0
 
-                while not done and step < 100:
+                while not done and step < max_steps:
                     # Check for pygame events (window close, etc.)
                     for event in pygame.event.get():
                         if event.type == pygame.QUIT:
@@ -1763,6 +1987,8 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                     if quit_requested:
                         break
 
+                    # Read speed in real-time
+                    delay = self.demo_speed.get()
                     time.sleep(delay)
                     action = np.argmax(self.agent.q_table[state])
                     self.message_queue.put(("log", f"   {action_names[action]}"))
@@ -1775,12 +2001,12 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                         if reward > 0:
                             self.message_queue.put(("log", f"   ✅ SUCCÈS en {step + 1} étapes!"))
                             if pygame_window:
-                                self.show_result_screen(pygame_window, True, episode + 1, 5, step + 1)
+                                self.show_result_screen(pygame_window, True, episode + 1, 5, step + 1, reason="victory")
                             successes += 1
                         else:
-                            self.message_queue.put(("log", f"   ❌ DÉFAITE après {step + 1} étapes"))
+                            self.message_queue.put(("log", f"   ❌ Tombé dans un trou après {step + 1} étapes"))
                             if pygame_window:
-                                self.show_result_screen(pygame_window, False, episode + 1, 5, step + 1)
+                                self.show_result_screen(pygame_window, False, episode + 1, 5, step + 1, reason="hole")
 
                         # Wait to show result (2 seconds or user close)
                         start_wait = time.time()
@@ -1795,6 +2021,22 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
 
                     state = next_state
                     step += 1
+
+                # Check if we ran out of steps (timeout)
+                if not done and step >= max_steps and not quit_requested:
+                    self.message_queue.put(("log", f"   ⏱️ Temps écoulé! ({max_steps} étapes max)"))
+                    if pygame_window:
+                        self.show_result_screen(pygame_window, False, episode + 1, 5, max_steps, reason="timeout")
+                    # Wait to show result
+                    start_wait = time.time()
+                    while time.time() - start_wait < 2.0:
+                        for event in pygame.event.get():
+                            if event.type == pygame.QUIT:
+                                quit_requested = True
+                                break
+                        if quit_requested:
+                            break
+                        time.sleep(0.1)
 
                 if quit_requested:
                     break
@@ -1856,12 +2098,19 @@ L'agent doit apprendre à aller de S à G sans tomber dans les trous (H).
                             self.message_queue.put(("draw_grid_success", (next_state, path)))
                             successes += 1
                         else:
-                            self.message_queue.put(("log", f"   ❌ Échec après {step + 1} étapes"))
+                            self.message_queue.put(("log", f"   ❌ Tombé dans un trou après {step + 1} étapes"))
                             self.message_queue.put(("draw_grid_fail", next_state))
                         time.sleep(delay * 2)  # Pause to see result
 
                     state = next_state
                     step += 1
+
+                # Check if we ran out of steps (timeout)
+                if not done and step >= max_steps and self.is_demo_running:
+                    self.message_queue.put(("log", f"   ⏱️ Temps écoulé! ({max_steps} étapes max)"))
+                    self.message_queue.put(("draw_grid_fail", state))
+                    delay = self.demo_speed.get()
+                    time.sleep(delay * 2)
 
             if self.is_demo_running:
                 self.message_queue.put(("log", f"\n🏁 Démo terminée! Succès: {successes}/5 ({successes*20}%)"))
